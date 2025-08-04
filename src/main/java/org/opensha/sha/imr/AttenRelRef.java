@@ -326,7 +326,9 @@ public enum AttenRelRef implements AttenRelSupplier {
 		@Override
 		public AttenuationRelationship instance(
 				ParameterChangeWarningListener listener) {
-			return new NSHMP_GMM_Wrapper.Single(Gmm.USGS_PRVI_ACTIVE_CRUST_COMBINED_TREE, getName(), getShortName(), false, null);
+			return new NSHMP_GMM_Wrapper.WeightedCombination(
+					WeightedList.evenlyWeighted(Gmm.PRVI_2025_ACTIVE_CRUST, Gmm.PRVI_2025_ACTIVE_CRUST_ADJUSTED),
+					getName(), getShortName(), false, null);
 		}
 		
 	},
@@ -337,18 +339,22 @@ public enum AttenRelRef implements AttenRelSupplier {
 		@Override
 		public AttenuationRelationship instance(
 				ParameterChangeWarningListener listener) {
-			return new NSHMP_GMM_Wrapper.Single(Gmm.USGS_PRVI_INTERFACE_COMBINED_TREE, getName(), getShortName(), false, null);
+			return new NSHMP_GMM_Wrapper.WeightedCombination(
+					WeightedList.evenlyWeighted(Gmm.PRVI_2025_INTERFACE, Gmm.PRVI_2025_INTERFACE_ADJUSTED),
+					getName(), getShortName(), false, null);
 		}
 		
 	},
 	
-	USGS_PRVI_SLAB(null, "USGS PRVI25 Slab (beta)",
-			"PRVI25-Slab", DEVELOPMENT) {
+	USGS_PRVI_SLAB(null, "USGS PRVI25 Intraslab (beta)",
+			"PRVI25-Intraslab", DEVELOPMENT) {
 		
 		@Override
 		public AttenuationRelationship instance(
 				ParameterChangeWarningListener listener) {
-			return new NSHMP_GMM_Wrapper.Single(Gmm.USGS_PRVI_INTRASLAB_COMBINED_TREE, getName(), getShortName(), false, null);
+			return new NSHMP_GMM_Wrapper.WeightedCombination(
+					WeightedList.evenlyWeighted(Gmm.PRVI_2025_INTRASLAB, Gmm.PRVI_2025_INTRASLAB_ADJUSTED),
+					getName(), getShortName(), false, null);
 		}
 		
 	},
