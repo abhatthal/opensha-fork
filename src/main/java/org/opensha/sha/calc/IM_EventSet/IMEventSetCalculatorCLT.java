@@ -2,7 +2,6 @@ package org.opensha.sha.calc.IM_EventSet;
 
 
 import java.io.File;
-import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
@@ -46,6 +45,14 @@ import org.opensha.sha.imr.AttenuationRelationship;
 import org.opensha.sha.imr.ScalarIMR;
 import org.opensha.sha.imr.attenRelImpl.USGS_Combined_2004_AttenRel;
 
+import org.apache.commons.cli.CommandLine;
+import org.apache.commons.cli.CommandLineParser;
+import org.apache.commons.cli.DefaultParser;
+import org.apache.commons.cli.HelpFormatter;
+import org.apache.commons.cli.Option;
+import org.apache.commons.cli.Options;
+import org.apache.commons.cli.ParseException;
+
 import com.google.common.base.Preconditions;
 
 import scratch.UCERF3.erf.mean.MeanUCERF3;
@@ -80,9 +87,9 @@ implements ParameterChangeWarningListener {
 	protected String inputFileName = "MeanSigmaCalc_InputFile.txt";
 	protected String dirName = "MeanSigma";
 	
-	private File outputDir;
+	private final File outputDir;
 	
-	private OrderedSiteDataProviderList providers;
+	private final OrderedSiteDataProviderList providers;
 	
 	private ArrayList<ArrayList<SiteDataValue<?>>> userDataVals;
 
@@ -90,8 +97,8 @@ implements ParameterChangeWarningListener {
 	 *  ArrayList that maps picklist attenRel string names to the real fully qualified
 	 *  class names
 	 */
-	private static ArrayList<String> attenRelClasses = new ArrayList<String>();
-	private static ArrayList<String> imNames = new ArrayList<String>();
+	private static final ArrayList<String> attenRelClasses = new ArrayList<>();
+	private static final ArrayList<String> imNames = new ArrayList<>();
 
 	static {
 //		imNames.add(CY_2006_AttenRel.NAME);
@@ -168,13 +175,13 @@ implements ParameterChangeWarningListener {
 
 	public void parseFile() throws IOException {
 
-		ArrayList<String> fileLines = null;
+		ArrayList<String> fileLines;
 		
 		logger.log(Level.INFO, "Parsing input file: " + inputFileName);
 
 		fileLines = FileUtils.loadFile(inputFileName);
 		
-		if (fileLines.size() == 0) {
+		if (fileLines.isEmpty()) {
 			throw new RuntimeException("Input file empty or doesn't exist! " + inputFileName);
 		}
 
@@ -185,47 +192,47 @@ implements ParameterChangeWarningListener {
 		int numIMTs=0;
 		int numSitesDone= 0;
 		int numSites =0;
-		for(int i=0; i<fileLines.size(); ++i) {
-			String line = ((String)fileLines.get(i)).trim();
-			// if it is comment skip to next line
-			if(line.startsWith("#") || line.equals("")) continue;
-			if(j==0)getERF(line);
-			if(j==1){
-				toApplyBackGroud(line.trim());
-			}
-			if(j==2){
-				double rupOffset = Double.parseDouble(line.trim());
-				setRupOffset(rupOffset);
-			}
-			if(j==3)
-				numIMRs = Integer.parseInt(line.trim());
-			if(j==4){
-				setIMR(line.trim());
-				++numIMRdone;
-				if(numIMRdone == numIMRs)
-					++j;
-				continue;
-			}
-			if(j==5)
-				numIMTs = Integer.parseInt(line.trim());
-			if(j==6){
-				setIMT(line.trim());
-				++numIMTdone;
-				if (numIMTdone == numIMTs)
-					++j;
-				continue;
-			}
-			if(j==7)
-				numSites = Integer.parseInt(line.trim());
-			if(j==8){
-				setSite(line.trim());
-				++numSitesDone;
-				if (numSitesDone == numSites)
-					++j;
-				continue;
-			}
-			++j;
-		}
+        for (String fileLine : fileLines) {
+            String line = fileLine.trim();
+            // if it is comment skip to next line
+            if (line.startsWith("#") || line.isEmpty()) continue;
+            if (j == 0) getERF(line);
+            if (j == 1) {
+                toApplyBackGroud(line.trim());
+            }
+            if (j == 2) {
+                double rupOffset = Double.parseDouble(line.trim());
+                setRupOffset(rupOffset);
+            }
+            if (j == 3)
+                numIMRs = Integer.parseInt(line.trim());
+            if (j == 4) {
+                setIMR(line.trim());
+                ++numIMRdone;
+                if (numIMRdone == numIMRs)
+                    ++j;
+                continue;
+            }
+            if (j == 5)
+                numIMTs = Integer.parseInt(line.trim());
+            if (j == 6) {
+                setIMT(line.trim());
+                ++numIMTdone;
+                if (numIMTdone == numIMTs)
+                    ++j;
+                continue;
+            }
+            if (j == 7)
+                numSites = Integer.parseInt(line.trim());
+            if (j == 8) {
+                setSite(line.trim());
+                ++numSitesDone;
+                if (numSitesDone == numSites)
+                    ++j;
+                continue;
+            }
+            ++j;
+        }
 	}
 
 	/**
@@ -251,8 +258,8 @@ implements ParameterChangeWarningListener {
 		if (tokens == 3) {
 			dataVal = st.nextToken().trim();
 		}
-		if (WillsMap2000.wills_vs30_map.keySet().contains(dataVal)) {
-			// this is a wills class
+		if (WillsMap2000.wills_vs30_map.containsKey(dataVal)) {
+			// this is a Wills Class
 			dataVals.add(new SiteDataValue<String>(SiteData.TYPE_WILLS_CLASS,
 					SiteData.TYPE_FLAG_MEASURED, dataVal));
 		} else if (dataVal != null) {
@@ -262,48 +269,21 @@ implements ParameterChangeWarningListener {
 				dataVals.add(new SiteDataValue<Double>(SiteData.TYPE_VS30,
 						SiteData.TYPE_FLAG_MEASURED, vs30));
 			} catch (NumberFormatException e) {
-//				e.printStackTrace();
 				System.err.println("*** WARNING: Site Wills/Vs30 value unknown: " + dataVal);
 			}
 		}
 		userDataVals.add(dataVals);
 	}
 	
-//	/**
-//	 * Sets the IMT from the string specification
-//	 * 
-//	 * @param imtLine
-//	 * @param attenRel
-//	 */
-//	public static String getIMTForLine(String imtLine) {
-//		StringTokenizer st = new StringTokenizer(imtLine);
-//		int numTokens = st.countTokens();
-//		String imt = st.nextToken().trim();
-//		if (numTokens == 2) {
-//			// this is SA
-//			double period = Double.parseDouble(st.nextToken().trim());
-//			int per10int = (int)(period * 10d + 0.5);
-//			String per10str = per10int + "";
-//			if (per10str.length() < 2)
-//				per10str = "0" + per10str;
-////			ParameterAPI imtParam = (ParameterAPI)attenRel.getIntensityMeasure();
-////			imtParam.getIndependentParameter(PeriodParam.NAME).setValue(period);
-//			imt += per10str;
-//		}
-//		System.out.println(imtLine + " => " + imt);
-//		return imt;
-//	}
-
 	/**
-	 * Gets the suported IMTs as String
+	 * Sets the supported IMTs as String
 	 * @param line String
 	 */
-	private void setIMT(String line){
+	private void setIMT(String line) {
 		if(supportedIMTs == null)
 			supportedIMTs = new ArrayList<String>();
 		this.supportedIMTs.add(line.trim());
 	}
-
 
 	/**
 	 * Creates the IMR instances and adds to the list of supported IMRs
@@ -313,12 +293,9 @@ implements ParameterChangeWarningListener {
 		if(chosenAttenuationsList == null)
 			chosenAttenuationsList = new ArrayList<ScalarIMR>();
 		String imrName = str.trim();
-		//System.out.println(imrName);
-		//System.out.println(imNames.get(1));
 		int index = imNames.indexOf(imrName);
 		createIMRClassInstance(attenRelClasses.get(index));
 	}
-
 
 	/**
 	 * Creates a class instance from a string of the full class name including packages.
@@ -560,71 +537,115 @@ implements ParameterChangeWarningListener {
 		param.setValueIgnoreWarning(e.getNewValue());
 
 	}
-	
-	private static void printUsage() {
-		System.out.println("Usage :\n\t"+"java -jar <jarfileName> [--HAZ01] [--d] <inputFileName> <output directory name>\n\n");
-		System.out.println("jarfileName : Name of the executable jar file, by default it is IM_EventSetCalc.jar");
-		System.out.println("--HAZ01 : Optional parameter to specify using the HAZ01 output file format instead of the default");
-		System.out.println("inputFileName :Name of the input file"+
-		" For eg: see \"IM_EventSetCalc_InputFile.txt\". ");
-		System.out.println("output directory name : Name of the output directory where all the output files will be generated");
-		System.exit(2);
-	}
+
+    private static void printUsage(Options options) {
+        HelpFormatter formatter = new HelpFormatter();
+        String header = "\nCompute Mean and Sigma for Attenuation Relationships and IMTs\n\n";
+        String footer = "\nExamples:\n" +
+                "  java -jar IMEventSetCLT.jar input.txt output/\n" +
+                "  java -jar IMEventSetCLT.jar --haz01 input.txt output/\n" +
+                "  java -jar IMEventSetCLT.jar -d input.txt output/\n" +
+                "  java -jar IMEventSetCLT.jar --help\n";
+
+        formatter.printHelp("IMEventSetCalculatorCLT [options] <inputFile> <outputDir>",
+                header, options, footer);
+    }
+
+    private static Level getLogLevel(CommandLine cmd) {
+        if (cmd.hasOption("ddd")) return Level.ALL;
+        if (cmd.hasOption("dd")) return Level.FINE;
+        if (cmd.hasOption("d")) return Level.CONFIG;
+        if (cmd.hasOption("q")) return Level.OFF;
+        return Level.WARNING; // default
+    }
+
+    private static Options createOptions() {
+        Options options = new Options();
+
+        options.addOption(Option.builder("h")
+                .longOpt("help")
+                .desc("Print this help message")
+                .build());
+
+        options.addOption(Option.builder()
+                .longOpt("haz01")
+                .desc("Use HAZ01 output file format instead of default")
+                .build());
+
+        options.addOption(Option.builder("d")
+                .desc("Set logging level to CONFIG (verbose)")
+                .build());
+
+        options.addOption(Option.builder("dd")
+                .desc("Set logging level to FINE (very verbose)")
+                .build());
+
+        options.addOption(Option.builder("ddd")
+                .desc("Set logging level to ALL (debug)")
+                .build());
+
+        options.addOption(Option.builder("q")
+                .longOpt("quiet")
+                .desc("Set logging level to OFF (quiet)")
+                .build());
+
+        return options;
+    }
 
 	public static void main(String[] args) {
-		boolean haz01 = false;
-		
-		ArrayList<String> parsedArgs = new ArrayList<String>();
-		
-		Level level = Level.WARNING;
-		
-		for (String arg : args) {
-			if (arg.trim().toLowerCase().equals("--haz01"))
-				haz01 = true;
-			else if (arg.trim().toLowerCase().equals("--d"))
-				level = Level.CONFIG;
-			else if (arg.trim().toLowerCase().equals("--dd"))
-				level = Level.FINE;
-			else if (arg.trim().toLowerCase().equals("--ddd"))
-				level = Level.ALL;
-			else if (arg.trim().toLowerCase().equals("--q"))
-				level = Level.OFF;
-			else
-				parsedArgs.add(arg);
-		}
-		
-		initLogger(level);
+        // Create CLI options
+        Options options = createOptions();
 
-		IMEventSetCalculatorCLT calc = null;
-		if (parsedArgs.size() == 2) {
-			calc = new IMEventSetCalculatorCLT(parsedArgs.get(0),parsedArgs.get(1));
-//		} else if (args.length == 3) {
-//			if (args[0].trim().toLowerCase().equals("--haz01"))
-//				haz01 = true;
-//			else {
-//				System.out.println("Unknown option: " + args[0]);
-//				printUsage();
-//			}
-//			calc = new IMEventSetCalculatorCLT(args[1],args[2]);
-		} else {
-			printUsage();
-		}
-		//IM_EventSetCalc calc = new IM_EventSetCalc("org/opensha/sha/calc/IM_EventSetCalc_v02/ExampleInputFile.txt","org/opensha/sha/calc/IM_EventSetCalc_v02/test");
-		try {
-			calc.parseFile();
-		} catch (Exception ex) {
-			logger.log(Level.INFO, "Error parsing input file!", ex);
-//			ex.printStackTrace();
-			System.exit(1);
-		}
+        CommandLineParser parser = new DefaultParser();
+        CommandLine cmd = null;
 
-		try {
-			calc.getMeanSigma(haz01);
-		} catch (IOException e) {
-			e.printStackTrace();
-			System.exit(1);
-		}
-		System.exit(0);
+        try {
+            cmd = parser.parse(options, args);
+        } catch (ParseException e) {
+            System.err.println("Error parsing command line: " + e.getMessage());
+            printUsage(options);
+            System.exit(2);
+        }
+
+        // Handle help option
+        if (cmd.hasOption("help")) {
+            printUsage(options);
+            System.exit(0);
+        }
+
+        // Extract values from command line
+        boolean haz01 = cmd.hasOption("haz01");
+        Level level = getLogLevel(cmd);
+
+        // Get the non-option arguments (positional arguments)
+        String[] remainingArgs = cmd.getArgs();
+        if (remainingArgs.length != 2) {
+            System.err.println("Error: Input file and output directory are required");
+            System.err.println("Expected 2 positional arguments, found: " + remainingArgs.length);
+            printUsage(options);
+            System.exit(2);
+        }
+        String inputFileName = remainingArgs[0];
+        String outputDirName = remainingArgs[1];
+
+        initLogger(level);
+
+        IMEventSetCalculatorCLT calc = new IMEventSetCalculatorCLT(inputFileName, outputDirName);
+
+        try {
+            calc.parseFile();
+        } catch (Exception ex) {
+            logger.log(Level.INFO, "Error parsing input file!", ex);
+            System.exit(1);
+        }
+
+        try {
+            calc.getMeanSigma(haz01);
+        } catch (IOException e) {
+            e.printStackTrace();
+            System.exit(1);
+        }
+        System.exit(0);
 	}
 
 	public int getNumSites() {
