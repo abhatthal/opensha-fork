@@ -65,7 +65,7 @@ public class IMEventSetCalculatorGUI extends JFrame implements ActionListener {
 
 	public IMEventSetCalculatorGUI() {
         try {
-            AbstractIMEventSetCalc.initLogger(Level.CONFIG);
+            AbstractIMEventSetCalc.initLogger(Level.WARNING);
 
             erfGuiBean = createERF_GUI_Bean();
             imtChooser = new IMT_ChooserPanel();
