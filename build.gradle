@@ -127,14 +127,14 @@ createAppTask("appJarAR", "AttenuationRelationshipGUI"+appSuffix, "org.opensha.s
 createAppTask("appJarSM", "ShakeMapGUI"+appSuffix, "org.opensha.sha.gui.ScenarioShakeMapApp")
 createAppTask("appJarSD", "SiteDataGUI"+appSuffix, "org.opensha.commons.data.siteData.gui.SiteDataCombinedApp")
 createAppTask("appJarGMT", "GMTMapApp"+appSuffix, "org.opensha.commons.mapping.gmt.gui.GMT_MapGeneratorApplet")
-createAppTask("appJarIM-CLT", "IMEventSetCLT"+appSuffix, "org.opensha.sha.calc.IM_EventSet.IMEventSetCalculatorCLT")
-createAppTask("appJarIM-GUI", "IMEventSetGUI"+appSuffix, "org.opensha.sha.calc.IM_EventSet.gui.IMEventSetCalculatorGUI")
+createAppTask("appJarIM-CLT", "IMEventSetCalculatorCLT"+appSuffix, "org.opensha.sha.calc.IM_EventSet.IMEventSetCalculatorCLT")
+createAppTask("appJarIM-GUI", "IMEventSetCalculatorGUI"+appSuffix, "org.opensha.sha.calc.IM_EventSet.gui.IMEventSetCalculatorGUI")
 
 task appZipIM(type: Zip) {
     dependsOn 'appJarIM-CLT'
     from ('build/libs/') {
-        include 'IMEventSetCLT-'+getDate()+'-'+getGitHash()+'.jar'
-        rename (('IMEventSetCLT-'+getDate()+'-'+getGitHash()+'.jar'), 'IMEventSetCalculatorCLT.jar')
+        include 'IMEventSetCalculatorCLT-'+getDate()+'-'+getGitHash()+'.jar'
+        rename (('IMEventSetCalculatorCLT-'+getDate()+'-'+getGitHash()+'.jar'), 'IMEventSetCalculatorCLT.jar')
     }
     from ('src/main/java/org/opensha/sha/calc/IM_EventSet/') {
         include '*.txt'
