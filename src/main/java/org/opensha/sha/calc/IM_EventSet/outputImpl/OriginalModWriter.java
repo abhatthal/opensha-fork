@@ -1,12 +1,15 @@
 package org.opensha.sha.calc.IM_EventSet.outputImpl;
 
 import java.io.File;
-import java.io.FileWriter;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.StringTokenizer;
 import java.util.logging.Level;
 
+import org.opensha.commons.data.CSVWriter;
 import org.opensha.commons.data.Site;
 import org.opensha.commons.data.TimeSpan;
 import org.opensha.commons.exceptions.ParameterException;
@@ -20,7 +23,7 @@ import org.opensha.sha.imr.ScalarIMR;
 import org.opensha.sha.imr.param.OtherParams.StdDevTypeParam;
 
 /**
- * Writes the original format files for the IM Event Set Calculator.
+ * Writes the original CSV format files for the IM Event Set Calculator.
  */
 public class OriginalModWriter extends IM_EventSetOutputWriter {
 	public static final String NAME = "OpenSHA Format Writer";
@@ -35,7 +38,7 @@ public class OriginalModWriter extends IM_EventSetOutputWriter {
 	public void writeFiles(ArrayList<ERF> erfs,
 			ArrayList<ScalarIMR> attenRels, ArrayList<String> imts)
 			throws IOException {
-		logger.log(Level.INFO, "Writing old format files files");
+		logger.log(Level.INFO, "Writing CSV format files");
 		outputDir = null;
 		boolean multipleERFs = erfs.size() != 1;
         for (int erfID=0; erfID<erfs.size(); erfID++) {
@@ -58,17 +61,16 @@ public class OriginalModWriter extends IM_EventSetOutputWriter {
 	}
 	
 	/**
-	 * This writes the mean and logarithmic standard deviation values to a file following the
-	 * original IM Event Set calculator format, with the only change being the addition of
-	 * a column for inter event std dev (at Erdem's request).
-	 * 
+     * This writes the mean and logarithmic standard deviation values to a CSV file
+	 *
 	 * @param erf
 	 * @param attenRel
+     * @param imt
 	 * @throws IOException
 	 */
 	private void writeOriginalMeanSigmaFiles(ERF erf, ScalarIMR attenRel, String imt) throws IOException {
 		setIMTFromString(imt, attenRel);
-		logger.log(Level.INFO, "Writing Mean/Sigma file for " + attenRel.getShortName() + ", " + imt);
+		logger.log(Level.INFO, "Writing Mean/Sigma CSV file for " + attenRel.getShortName() + ", " + imt);
 		ArrayList<Parameter> defaultSiteParams = getDefaultSiteParams(attenRel);
 
 		ArrayList<Site> sites = getInitializedSites(attenRel);
@@ -84,130 +86,182 @@ public class OriginalModWriter extends IM_EventSetOutputWriter {
         }
 
 		Parameter<?> im = attenRel.getIntensityMeasure();
-		String fname = attenRel.getShortName();
+		StringBuilder fname = new StringBuilder(attenRel.getShortName());
 		StringTokenizer imtTok = new StringTokenizer(imt);
 		if (imtTok.countTokens() > 1) {
 			while (imtTok.hasMoreTokens())
-				fname += "_" + imtTok.nextToken();
-			fname += ".txt";
+				fname.append("_").append(imtTok.nextToken());
+			fname.append(".csv");
 		} else {
-			fname += "_" + imt + ".txt";
+			fname.append("_").append(imt).append(".csv");
 		}
 		
-		FileWriter fw = new FileWriter(outputDir.getAbsolutePath() + File.separator + fname);
+        File file = new File(outputDir.getAbsolutePath() + File.separator + fname);
+        try (CSVWriter csvWriter = new CSVWriter(new FileOutputStream(file), true)) {
 
-		erf.updateForecast();
-		
-		int numSources = erf.getNumSources();
-		
-		for (int sourceID=0; sourceID<numSources; sourceID++) {
-			ProbEqkSource source = erf.getSource(sourceID);
-			if (!shouldIncludeSource(source))
-				continue;
-			for (int rupID=0; rupID<source.getNumRuptures(); rupID++) {
-				ProbEqkRupture rup = source.getRupture(rupID);
-				attenRel.setEqkRupture(rup);
-				String line = sourceID + " " + rupID;
-				for (Site site : sites) {
-					attenRel.setSite(site);
-					double mean = attenRel.getMean();
-                    if (stdDevParam != null) {
-                        stdDevParam.setValue(StdDevTypeParam.STD_DEV_TYPE_TOTAL);
+            // Headers
+            List<String> header = new ArrayList<>();
+            header.add("SourceId");
+            header.add("RuptureId");
+            for (int i = 0; i < sites.size(); i++) {
+                int siteIndex = i + 1;
+                header.add("Mean(" + siteIndex + ")");
+                header.add("Total-Std-Dev.(" + siteIndex + ")");
+                header.add("Inter-Event-Std-Dev.(" + siteIndex + ")");
+            }
+            csvWriter.write(header);
+
+            erf.updateForecast();
+
+            int numSources = erf.getNumSources();
+
+            for (int sourceID = 0; sourceID < numSources; sourceID++) {
+                ProbEqkSource source = erf.getSource(sourceID);
+                if (!shouldIncludeSource(source))
+                    continue;
+                for (int rupID = 0; rupID < source.getNumRuptures(); rupID++) {
+                    ProbEqkRupture rup = source.getRupture(rupID);
+                    attenRel.setEqkRupture(rup);
+                    List<String> row = new ArrayList<>();
+                    row.add(Integer.toString(sourceID));
+                    row.add(Integer.toString(rupID));
+
+                    for (Site site : sites) {
+                        attenRel.setSite(site);
+                        double mean = attenRel.getMean();
+                        if (stdDevParam != null) {
+                            stdDevParam.setValue(StdDevTypeParam.STD_DEV_TYPE_TOTAL);
+                        }
+                        double total = attenRel.getStdDev();
+                        double inter = -1;
+                        if (hasInterIntra) {
+                            stdDevParam.setValue(StdDevTypeParam.STD_DEV_TYPE_INTER);
+                            inter = attenRel.getStdDev();
+                        }
+                        row.add(meanSigmaFormat.format(mean));
+                        row.add(meanSigmaFormat.format(total));
+                        row.add(meanSigmaFormat.format(inter));
                     }
-                    double total = attenRel.getStdDev();
-					double inter = -1;
-					if (hasInterIntra) {
-						stdDevParam.setValue(StdDevTypeParam.STD_DEV_TYPE_INTER);
-						inter = attenRel.getStdDev();
-					}
-					line += " " + meanSigmaFormat.format(mean) + " " + meanSigmaFormat.format(total)
-									+ " " + meanSigmaFormat.format(inter);
-				}
-				fw.write(line + "\n");
-			}
-		}
-		fw.close();
+                    csvWriter.write(row);
+                }
+            }
+        }
 		logger.log(Level.INFO, "Done writing " + fname);
 		// restore the default site params for the atten rel
 		setSiteParams(attenRel, defaultSiteParams);
 	}
 	
 	/**
-	 * This writes the rupture distance files following the format of the original IM Event Set Calculator.
-	 * The file 'rup_dist_info.txt' is equivelant to the old files, and 'rup_dist_jb_info.txt' is similar
-	 * but with JB distances (at Erdem's request).
-	 * 
+	 * This writes the rupture distance files in CSV format.
+     * <p>
+     * rup_dist_info.csv is the shortest distance to a point on the rupture surface
+     * rup_dist_jb_info.csv is similar but generated with JB distances
+	 * </p>
+     *
 	 * @param erf
 	 * @throws IOException
 	 */
 	private void writeOriginalRupDistFile(ERF erf) throws IOException {
 		logger.log(Level.INFO, "Writing rupture distance files");
-		String fname = "rup_dist_info.txt";
-		String fname_jb = "rup_dist_jb_info.txt";
-		FileWriter fw = new FileWriter(outputDir.getAbsolutePath() + File.separator + fname);
-		FileWriter fw_jb = new FileWriter(outputDir.getAbsolutePath() + File.separator + fname_jb);
-		
-		ArrayList<Site> sites = calc.getSites();
-		
-		erf.updateForecast();
-		
-		int numSources = erf.getNumSources();
-		
-		for (int sourceID=0; sourceID<numSources; sourceID++) {
-			ProbEqkSource source = erf.getSource(sourceID);
-			if (!shouldIncludeSource(source))
-				continue;
-			for (int rupID=0; rupID<source.getNumRuptures(); rupID++) {
-				ProbEqkRupture rup = source.getRupture(rupID);
-				String line = sourceID + " " + rupID;
-				String lineJB = line;
-				for (Site site : sites) {
-					double rupDist = rup.getRuptureSurface().getDistanceRup(site.getLocation());
-					double distJB = rup.getRuptureSurface().getDistanceJB(site.getLocation());
-					line += " " + distFormat.format(rupDist);
-					lineJB += " " + distFormat.format(distJB);
-				}
-				fw.write(line + "\n");
-				fw_jb.write(lineJB + "\n");
-			}
-		}
-		fw.close();
-		fw_jb.close();
+		String fname = "rup_dist_info.csv";
+		String fname_jb = "rup_dist_jb_info.csv";
+
+        File file = new File(outputDir.getAbsolutePath() + File.separator + fname);
+        File file_jb = new File(outputDir.getAbsolutePath() + File.separator + fname_jb);
+
+        try (CSVWriter csvWriter = new CSVWriter(new FileOutputStream(file), true);
+             CSVWriter csvWriterJB = new CSVWriter(new FileOutputStream(file_jb), true)) {
+
+            ArrayList<Site> sites = calc.getSites();
+
+            // Headers
+            List<String> header = new ArrayList<>();
+            header.add("SourceId");
+            header.add("RuptureId");
+            for (int i = 0; i < sites.size(); i++) {
+                int siteIndex = i + 1;
+                header.add("RupDist(" + siteIndex + ")");
+            }
+            csvWriter.write(header);
+            csvWriterJB.write(header);
+
+            erf.updateForecast();
+
+            int numSources = erf.getNumSources();
+
+            for (int sourceID = 0; sourceID < numSources; sourceID++) {
+                ProbEqkSource source = erf.getSource(sourceID);
+                if (!shouldIncludeSource(source))
+                    continue;
+                for (int rupID = 0; rupID < source.getNumRuptures(); rupID++) {
+                    ProbEqkRupture rup = source.getRupture(rupID);
+                    List<String> row = new ArrayList<>();
+                    List<String> rowJB = new ArrayList<>();
+                    row.add(Integer.toString(sourceID));
+                    row.add(Integer.toString(rupID));
+                    rowJB.add(Integer.toString(sourceID));
+                    rowJB.add(Integer.toString(rupID));
+
+                    for (Site site : sites) {
+                        double rupDist = rup.getRuptureSurface().getDistanceRup(site.getLocation());
+                        double distJB = rup.getRuptureSurface().getDistanceJB(site.getLocation());
+                        row.add(distFormat.format(rupDist));
+                        rowJB.add(distFormat.format(distJB));
+                    }
+                    csvWriter.write(row);
+                    csvWriterJB.write(rowJB);
+                }
+            }
+        }
+        logger.log(Level.INFO, "Done writing " + fname);
+        logger.log(Level.INFO, "Done writing " + fname_jb);
 	}
-	
+
 	/**
-	 * This writes source/rupture metadata to the file 'src_rup_metadata.txt'
-	 * 
+	 * This writes source/rupture metadata to the file 'src_rup_metadata.csv'
+	 *
 	 * @param erf
 	 * @throws IOException
 	 */
 	private void writeOriginalSrcRupMetaFile(ERF erf) throws IOException {
 		logger.log(Level.INFO, "Writing source/rupture metadata file");
-		String fname = "src_rup_metadata.txt";
-		FileWriter fw = new FileWriter(outputDir.getAbsolutePath() + File.separator + fname);
-		
-		ArrayList<Site> sites = calc.getSites();
-		
-		erf.updateForecast();
-		
-		int numSources = erf.getNumSources();
-		
-		double duration = ((TimeSpan)erf.getTimeSpan()).getDuration();
-		
-		for (int sourceID=0; sourceID<numSources; sourceID++) {
-			ProbEqkSource source = erf.getSource(sourceID);
-			if (!shouldIncludeSource(source))
-				continue;
-			for (int rupID=0; rupID<source.getNumRuptures(); rupID++) {
-				ProbEqkRupture rup = source.getRupture(rupID);
-				double rate = rup.getMeanAnnualRate(duration);
-				fw.write(sourceID + "  " + rupID + " " + (float)rate + "  "
-						+ (float)rup.getMag() + "  " + source.getName() + "\n");
-			}
-		}
-		fw.close();
+		String fname = "src_rup_metadata.csv";
+
+        File file = new File(outputDir.getAbsolutePath() + File.separator + fname);
+        try (CSVWriter csvWriter = new CSVWriter(new FileOutputStream(file), true)) {
+
+            // Headers
+            List<String> header = Arrays.asList("SourceId", "RuptureId", "annualizedRate", "Mag", "Src-Name");
+            csvWriter.write(header);
+
+            erf.updateForecast();
+
+            int numSources = erf.getNumSources();
+
+            double duration = ((TimeSpan)erf.getTimeSpan()).getDuration();
+
+            for (int sourceID = 0; sourceID < numSources; sourceID++) {
+                ProbEqkSource source = erf.getSource(sourceID);
+                if (!shouldIncludeSource(source))
+                    continue;
+                for (int rupID = 0; rupID < source.getNumRuptures(); rupID++) {
+                    ProbEqkRupture rup = source.getRupture(rupID);
+                    double rate = rup.getMeanAnnualRate(duration);
+                    List<String> row = Arrays.asList(
+                            Integer.toString(sourceID),
+                            Integer.toString(rupID),
+                            rateFormat.format(rate),
+                            Float.toString((float)rup.getMag()),
+                            source.getName()
+                    );
+                    csvWriter.write(row);
+                }
+            }
+        }
+        logger.log(Level.INFO, "Done writing " + fname);
 	}
-	
+
+    @Override
 	public String getName() {
 		return NAME;
 	}

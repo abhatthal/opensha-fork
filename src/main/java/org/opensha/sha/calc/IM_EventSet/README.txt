@@ -48,13 +48,13 @@ There are 3 types of output files generated:
 
 where i- corresponds to the ith site, and RuptureId and SourceId tell which rupture and source the line corresponds to. If the selected IMR doesn't support Inter Event Std Dev, then the value will be -1.
 
-Different files are produced for each IMT/AttenuationRelationship pair (e.g., "AS1997_SA200.txt" would be the result for spectral acceleration at 0.2 sec period using the Abrahamson and Silva (1997) attenuation relationship).
+Different files are produced for each IMT/AttenuationRelationship pair (e.g., "AS1997_SA200.csv" would be the result for spectral acceleration at 0.2 sec period using the Abrahamson and Silva (1997) attenuation relationship).
 
-2) A file giving Rupture-Distance (shortest distance to a point on the rupture surface) for each site called 'rup_dist_info.txt' in the following format:
+2) A file giving Rupture-Distance (shortest distance to a point on the rupture surface) for each site called 'rup_dist_info.csv' in the following format:
 
 	SourceId RuptureId RupDist(1) RupDist(2) ............... RupDist(i)
 
-where i- corresponds to the ith Site. A similar file, 'rup_dist_jb_info.txt,' is also generated with JB distances.
+where i- corresponds to the ith Site. A similar file, 'rup_dist_jb_info.csv,' is also generated with JB distances.
   
 3) a Src-Rup Metadata file structured in the following way:
 
