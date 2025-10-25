@@ -7,8 +7,11 @@ import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
+import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.logging.Level;
+import java.util.List;
+import java.util.stream.Collectors;
 
 import javax.swing.*;
 
@@ -185,7 +188,37 @@ public class IMEventSetCalculatorGUI extends JFrame implements ActionListener {
 
 	private ERF_GuiBean createERF_GUI_Bean() {
 		try {
-			return new ERF_GuiBean(ERF_Ref.get(false, ServerPrefUtils.SERVER_PREFS));
+            // The following ERFs are excluded as they do not work for IM Event Set Calculations
+            List<String> erfExcluded = List.of(
+                    "WG02 Fortran Wrapped ERF List",
+                    "STEP Alaskan Pipeline ERF",
+                    "Poisson Fault ERF",
+                    "Floating Poisson Fault ERF",
+                    "PEER Multi Source",
+                    "PEER Non Planar Fault Forecast",
+                    "PEER Area Forecast",
+                    "PEER Logic Tree ERF List",
+                    "UCERF2 ERF Epistemic List",
+                    "UCERF3 Epistemic List ERF",
+                    "WG02 Eqk Rup Forecast",
+                    "WG02 ERF List",
+                    "Point 2 Mult Vertical SS Fault ERF",
+                    "Point2Mult Vertical SS Fault ERF List",
+                    "Yucca Mountain ERF Epistemic List",
+                    "Yucca mountain Adj. ERF",
+                    "Point Source ERF");
+            Set<ERF_Ref> erfRefs = ERF_Ref.get(true, ServerPrefUtils.SERVER_PREFS)
+                    .stream()
+                    .filter(erfRef -> !erfExcluded.contains(erfRef.toString()))
+                    .collect(Collectors.toSet());
+            for (ERF_Ref erfRef : erfRefs) {
+                System.out.println(erfRef.toString());
+            }
+            for (ERF_Ref erfRef : erfRefs) {
+                System.out.println(erfRef.getERFClass().getSimpleName());
+            }
+            // Create a GUI Bean using only the supplied ERFs
+			return new ERF_GuiBean(erfRefs);
 		} catch (InvocationTargetException e) {
 			throw new RuntimeException(e);
 		}
