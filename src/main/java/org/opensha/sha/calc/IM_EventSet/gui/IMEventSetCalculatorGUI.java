@@ -187,35 +187,35 @@ public class IMEventSetCalculatorGUI extends JFrame implements ActionListener {
     }
 
 	private ERF_GuiBean createERF_GUI_Bean() {
-		try {
-            // The following ERFs are excluded as they do not work for IM Event Set Calculations
-            List<String> erfExcluded = List.of(
-                    "WG02 Fortran Wrapped ERF List",
-                    "STEP Alaskan Pipeline ERF",
-                    "Poisson Fault ERF",
-                    "Floating Poisson Fault ERF",
-                    "PEER Multi Source",
-                    "PEER Non Planar Fault Forecast",
-                    "PEER Area Forecast",
-                    "PEER Logic Tree ERF List",
-                    "UCERF2 ERF Epistemic List",
-                    "UCERF3 Epistemic List ERF",
-                    "WG02 Eqk Rup Forecast",
-                    "WG02 ERF List",
-                    "Point 2 Mult Vertical SS Fault ERF",
-                    "Point2Mult Vertical SS Fault ERF List",
-                    "Yucca Mountain ERF Epistemic List",
-                    "Yucca mountain Adj. ERF",
-                    "Point Source ERF");
-            Set<ERF_Ref> erfRefs = ERF_Ref.get(false, ServerPrefUtils.SERVER_PREFS)
-                    .stream()
-                    .filter(erfRef -> !erfExcluded.contains(erfRef.toString()))
-                    .collect(Collectors.toSet());
-            // Create a GUI Bean using only the supplied ERFs
-			return new ERF_GuiBean(erfRefs);
-		} catch (InvocationTargetException e) {
-			throw new RuntimeException(e);
-		}
+        // The following ERFs are excluded as they do not work for IM Event Set Calculations
+        ArrayList<ERF_Ref> erfExcludedRefs = new ArrayList<>(List.of(
+                ERF_Ref.WGCEP_02_WRAPPED_LIST,      // "WG02 Fortran Wrapped ERF List"
+                ERF_Ref.STEP_ALASKA,                // "STEP Alaskan Pipeline ERF"
+                ERF_Ref.POISSON_FAULT,              // "Poisson Fault ERF"
+                ERF_Ref.POISSON_FLOATING_FAULT,     // "Floating Poisson Fault ERF"
+                ERF_Ref.PEER_MULTI_SOURCE,          // "PEER Multi Source"
+                ERF_Ref.PEER_NON_PLANAR_FAULT,      // "PEER Non Planar Fault Forecast"
+                ERF_Ref.PEER_AREA,                  // "PEER Area Forecast"
+                ERF_Ref.PEER_LOGIC_TREE,            // "PEER Logic Tree ERF List"
+                ERF_Ref.UCERF_2_TIME_INDEP_LIST,    // "UCERF2 ERF Epistemic List"
+                ERF_Ref.UCERF3_EPISTEMIC,           // "UCERF3 Epistemic List ERF"
+                ERF_Ref.WGCEP_02,                   // "WG02 Eqk Rup Forecast"
+                ERF_Ref.WGCEP_02_LIST,              // "WG02 ERF List"
+                ERF_Ref.POINT_SOURCE_MULTI_VERT,    // "Point 2 Mult Vertical SS Fault ERF"
+                ERF_Ref.POINT_SOURCE_MULTI_VERT_LIST, // "Point2Mult Vertical SS Fault ERF List"
+                ERF_Ref.YUCCA_MOUNTAIN_LIST,        // "Yucca Mountain ERF Epistemic List"
+                ERF_Ref.YUCCA_MOUNTAIN,             // "Yucca mountain Adj. ERF"
+                ERF_Ref.POINT_SOURCE                // "Point Source ERF"
+        ));
+        try {
+            ERF_GuiBean erfGuiBean = new ERF_GuiBean(ERF_Ref.get(false, ServerPrefUtils.SERVER_PREFS));
+            erfGuiBean.removeERFs_FromList(erfExcludedRefs);
+            return erfGuiBean;
+        } catch (InvocationTargetException e) {
+            // Handle exception if removal fails
+            e.printStackTrace();
+            throw new RuntimeException(e);
+        }
 	}
 
     private boolean isReadyForCalc(ArrayList<Location> locs, ArrayList<ArrayList<SiteDataValue<?>>> dataLists,
