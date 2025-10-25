@@ -23,16 +23,47 @@ An example input file is included in this directory as "ExampleInputFileCLT.txt"
 
 Each line of the input file that starts with "#" is a comment that gets ignored by the program (they are just for user's information).
 
-The first choice is which of the following Earthquake Rupture Forecasts to use: 
+The first choice is which of the following Earthquake Rupture Forecasts to use:
 
-	NSHMP-2002 Earthquake Rupture Forecast (ERF)
-	WGCEP-UCERF-1.0 (2005)
-	WGCEP (2007) UCERF2 - Single Branch
-	GEM1 CEUS ERF
+    WGCEP (2007) UCERF2 - Single Branch
+    WGCEP Eqk Rate Model 2 ERF
+    NSHM23-WUS (crustal only, excl. Cascadia) Branch Avg ERF
+    USGS/CGS 2002 Adj. Cal. ERF
+    UCERF3 Single Branch ERF
+    USGS/CGS 1996 Cal. ERF
+    WGCEP (2007) UCERF2 - Single Branch, Modified, Fault Model 2.1 only
+    WGCEP UCERF 1.0 (2005)
+    Fault System Solution ERF
+    USGS/CGS 1996 Adj. Cal. ERF
+    Mean UCERF3
+
+You could alternatively specify their corresponding short names as follows:
+    MeanUCERF2
+    UCERF2
+    NSHM23_WUS_BranchAveragedERF
+    Frankel02_AdjustableEqkRupForecast
+    UCERF3_CompoundSol_ERF
+    Frankel96_EqkRupForecast
+    ModMeanUCERF2_FM2pt1
+    WGCEP_UCERF1_EqkRupForecast
+    FaultSystemSolutionERF
+    Frankel96_AdjustableEqkRupForecast
+    MeanUCERF3
+
+
+For example, you could pass either
+Mean UCERF3
+or
+MeanUCERF3
+as the first choice. Either long or short name formats will result in the same choice.
+
 
 All adjustable parameters for these ERFs are hard-wired in the code to default/official settings; only whether to include the background/grid sources and the offset for floating ruptures are set in the input file.
+Use the graphical application, IMEventSetCalculatorGUI.jar, for more refined control over the ERF parameters.
 
-If "WGCEP-UCERF-1.0 (2005)" or "WGCEP (2007) UCERF2 - Single Branch" is chosen the timespan duration is hard coded as 1 year and this model will be treated as Time independent model.
+The timespan duration is hard coded as 1 year, and this model will be treated as a time-independent model.
+The only exceptions are MeanUCERF3 and any ERFs that have constraints on modified timespan durations.
+You will see a warning message if an ERF is selected and the timespan duration could not be set to 1 year.
 
 The next choices are which AttenuationRelationships and IMTs to support (see ExampleInputFile.txt file for the many options). If user chooses an IMT that is not supported by one or more of the chosen AttenuationRelationships then the program will terminate with an error message.
 

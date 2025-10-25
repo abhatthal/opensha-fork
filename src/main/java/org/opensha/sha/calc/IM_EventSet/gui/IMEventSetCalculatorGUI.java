@@ -207,16 +207,10 @@ public class IMEventSetCalculatorGUI extends JFrame implements ActionListener {
                     "Yucca Mountain ERF Epistemic List",
                     "Yucca mountain Adj. ERF",
                     "Point Source ERF");
-            Set<ERF_Ref> erfRefs = ERF_Ref.get(true, ServerPrefUtils.SERVER_PREFS)
+            Set<ERF_Ref> erfRefs = ERF_Ref.get(false, ServerPrefUtils.SERVER_PREFS)
                     .stream()
                     .filter(erfRef -> !erfExcluded.contains(erfRef.toString()))
                     .collect(Collectors.toSet());
-            for (ERF_Ref erfRef : erfRefs) {
-                System.out.println(erfRef.toString());
-            }
-            for (ERF_Ref erfRef : erfRefs) {
-                System.out.println(erfRef.getERFClass().getSimpleName());
-            }
             // Create a GUI Bean using only the supplied ERFs
 			return new ERF_GuiBean(erfRefs);
 		} catch (InvocationTargetException e) {

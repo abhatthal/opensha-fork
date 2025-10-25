@@ -31,7 +31,7 @@ Exclude
 3
 # One the next N lines, identify the N attenuation 
 # relationships from the following options
-# (first five are final NGA-West2 relationships, followed by 2008 NGA-West releationships):
+# (first five are final NGA-West2 relationships, followed by 2008 NGA-West relationships):
 # "Abrahamson, Silva & Kamai (2014)"
 # "Boore, Stewart, Seyhan & Atkinson (2014)"
 # "Campbell & Bozorgnia (2014)"
@@ -57,8 +57,8 @@ Exclude
 # "Baturay and Stewart (2003)"
 # "Bazzuro and Cornell (2004)"
 # "Goulet Et. Al. (2006)"
-# Click links at side of following link for some details:
-# http://www.opensha.org/glossary-attenuationRelation
+# Click links at the side of the following link for some details:
+# https://www.opensha.org/Glossary#attenuation-relationship
 Boore & Atkinson (2008)
 Chiou & Youngs (2008)
 Campbell & Bozorgnia (2008)
@@ -66,7 +66,7 @@ Campbell & Bozorgnia (2008)
 # Next, first choose the number of Intensity Measure Types to consider 
 # in this calculation, and then specify those Intensity Measure Types.  
 #
-# Currently the following are supported: "PGA", "PGV", "SA", and "MMI".  
+# Currently, the following are supported: "PGA", "PGV", "SA", and "MMI".
 #
 # If "SA" is chosen, then  give the period as well in one of the following formats
 # (format will be automatically detected):
@@ -78,7 +78,7 @@ Campbell & Bozorgnia (2008)
 # 
 # Number of IMTs for which computation needs to be done
 3
-# Identify those IMT's:
+# Identify those IMTs:
 PGA
 SA200
 SA 1.0

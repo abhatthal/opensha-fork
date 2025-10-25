@@ -5,8 +5,7 @@ import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
-import java.util.ArrayList;
-import java.util.StringTokenizer;
+import java.util.*;
 import java.util.logging.Level;
 
 import org.opensha.commons.data.siteData.OrderedSiteDataProviderList;
@@ -14,6 +13,7 @@ import org.opensha.commons.data.siteData.SiteData;
 import org.opensha.commons.data.siteData.SiteDataValue;
 import org.opensha.commons.data.siteData.impl.WillsMap2000;
 import org.opensha.commons.data.siteData.impl.WillsMap2006;
+import org.opensha.commons.exceptions.ConstraintException;
 import org.opensha.commons.exceptions.ParameterException;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationList;
@@ -28,6 +28,7 @@ import org.opensha.commons.util.ServerPrefUtils;
 import org.opensha.sha.calc.IM_EventSet.outputImpl.HAZ01Writer;
 import org.opensha.sha.calc.IM_EventSet.outputImpl.OriginalModWriter;
 import org.opensha.sha.earthquake.ERF;
+import org.opensha.sha.earthquake.ERF_Ref;
 import org.opensha.sha.earthquake.param.AleatoryMagAreaStdDevParam;
 import org.opensha.sha.earthquake.param.BackgroundRupParam;
 import org.opensha.sha.earthquake.param.BackgroundRupType;
@@ -76,12 +77,13 @@ implements ParameterChangeWarningListener {
 
 	protected LocationList locList;
 
+    // Selected ERF
 	protected ERF forecast;
 
-	//supported Attenuations
+	// Supported Attenuations
 	protected ArrayList<ScalarIMR> chosenAttenuationsList;
 
-	//some static IMT names
+	// Static IMT names
 	protected ArrayList<String> supportedIMTs;
 
 	protected String inputFileName = "MeanSigmaCalc_InputFile.txt";
@@ -93,7 +95,12 @@ implements ParameterChangeWarningListener {
 	
 	private ArrayList<ArrayList<SiteDataValue<?>>> userDataVals;
 
-	/**
+    // All supported ERFs - call .instance() to get the BaseERF
+    private static final Set<ERF_Ref> erfRefs = ERF_Ref.get(false, ServerPrefUtils.SERVER_PREFS);
+    // Map of ERF names to their references for quick lookup
+    private static final Map<String, ERF_Ref> erfNameMap = new HashMap<>();
+
+    /**
 	 *  ArrayList that maps picklist attenRel string names to the real fully qualified
 	 *  class names
 	 */
@@ -101,6 +108,15 @@ implements ParameterChangeWarningListener {
 	private static final ArrayList<String> imNames = new ArrayList<>();
 
 	static {
+        // Initialize ERF name map
+        for (ERF_Ref ref : erfRefs) {
+            // Allow users to reference ERF by long or short names
+            String erfName = ref.toString();
+            String erfShortName = ref.getERFClass().getSimpleName();
+            erfNameMap.put(erfName, ref);
+            erfNameMap.put(erfShortName, ref);
+        }
+
 //		imNames.add(CY_2006_AttenRel.NAME);
 //		attenRelClasses.add(CY_2006_AttenRel.class.getName());
 //		imNames.add(CY_2008_AttenRel.NAME);
@@ -141,6 +157,7 @@ implements ParameterChangeWarningListener {
 //		attenRelClasses.add(ShakeMap_2003_AttenRel.class.getName());
 //		imNames.add(SEA_1999_AttenRel.NAME);
 //		attenRelClasses.add(SEA_1999_AttenRel.class.getName());
+
 		for (AttenRelRef ref : AttenRelRef.get(ServerPrefUtils.SERVER_PREFS)) {
 			try {
 				String name = ref.getName();
@@ -155,7 +172,7 @@ implements ParameterChangeWarningListener {
 
 	public IMEventSetCalculatorCLT(String inpFile, String outDir) {
 		inputFileName = inpFile;
-		dirName = outDir ;
+		dirName = outDir;
 		outputDir = new File(dirName);
 		
 //		providers = OrderedSiteDataProviderList.createCompatibilityProviders(false);
@@ -174,7 +191,6 @@ implements ParameterChangeWarningListener {
 	}
 
 	public void parseFile() throws IOException {
-
 		ArrayList<String> fileLines;
 		
 		logger.log(Level.INFO, "Parsing input file: " + inputFileName);
@@ -349,20 +365,45 @@ implements ParameterChangeWarningListener {
 		}
 	}
 
+    /**
+     * Creates an ERF instance from the string parsed as an erfName.
+     * ERFs are created with default parameters, with a few hardcoded exceptions.
+     * All values set in getERF can be overriden by custom parameters in `parseFile`.
+     * @param line user input to parse into an erfName
+     */
 	private void getERF(String line){
 		String erfName = line.trim();
 		logger.log(Level.CONFIG, "Attempting to identify ERF from name: " + erfName);
-		if(erfName.equals(Frankel02_AdjustableEqkRupForecast.NAME))
-			createFrankel02Forecast();
-		else if (erfName.equals(WGCEP_UCERF1_EqkRupForecast.NAME))
-			createUCERF1_Forecast();
-		else if (erfName.equals(MeanUCERF2.NAME))
-			createMeanUCERF2_Forecast();
-		else if (erfName.startsWith("Mean UCERF3"))
-			createMeanUCERF3_Forecast(erfName);
-		else throw new RuntimeException ("Unsupported ERF");
-		if (!(forecast instanceof MeanUCERF3))
-			forecast.getTimeSpan().setDuration(1.0);
+
+        ERF_Ref erfRef = erfNameMap.get(erfName);
+        // For backwards compatibility, these ERFs are hardcoded with special default parameters.
+		if (erfName.equals(Frankel02_AdjustableEqkRupForecast.NAME)) {
+            createFrankel02Forecast();
+        } else if (erfName.equals(WGCEP_UCERF1_EqkRupForecast.NAME)) {
+            createUCERF1_Forecast();
+        } else if (erfName.equals(MeanUCERF2.NAME)) {
+            createMeanUCERF2_Forecast();
+        } else if (erfName.startsWith("Mean UCERF3")) {
+            createMeanUCERF3_Forecast(erfName);
+        } else if (erfRef != null) {
+            // Non-hardcoded ERFs are created with default parameters.
+            logger.log(Level.CONFIG, "Creating ERF dynamically with default parameters.");
+            forecast = (ERF)erfRef.instance();
+        } else {
+            throw new RuntimeException ("Unsupported ERF");
+        }
+        // Only set duration to 1.0 if the ERF allows it
+        if (!(forecast instanceof MeanUCERF3)) {
+            try {
+                // Check if the duration parameter allows 1.0
+                forecast.getTimeSpan().setDuration(1.0);
+                logger.log(Level.FINE, "Set duration to 1.0 for ERF: " + erfName);
+            } catch (ConstraintException e) {
+                // ERF has constraints that don't allow duration=1.0, use default duration
+                logger.log(Level.WARNING, "ERF " + erfName + " does not allow duration=1.0, " +
+                        "using default duration: " + forecast.getTimeSpan().getDuration());
+            }
+        }
 	}
 
 	/**
