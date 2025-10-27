@@ -1,0 +1,5 @@
+# Enter the Lat, Lon, and optionally Vs30 or Wills class on a separate line for each:
+#,e.g., "34.1,-118.1,760"
+34.0543,-118.0821,270
+33.6567,-117.7051,270
+34.0852,-118.1421,360

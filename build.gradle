@@ -138,6 +138,7 @@ task appZipIM(type: Zip) {
     }
     from ('src/main/java/org/opensha/sha/calc/IM_EventSet/') {
         include '*.txt'
+        include '*.csv'
     }
     archiveFileName = 'IMEventSetCalculatorCLT.zip'
     doFirst {
