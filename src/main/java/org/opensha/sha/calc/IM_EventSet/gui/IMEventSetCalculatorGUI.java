@@ -5,13 +5,9 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
 import java.io.IOException;
-import java.lang.reflect.InvocationTargetException;
 import java.util.ArrayList;
-import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.logging.Level;
-import java.util.List;
-import java.util.stream.Collectors;
 
 import javax.swing.*;
 
@@ -22,15 +18,14 @@ import org.opensha.commons.geo.Location;
 import org.opensha.commons.gui.DisclaimerDialog;
 import org.opensha.commons.util.ApplicationVersion;
 import org.opensha.commons.util.FileUtils;
-import org.opensha.commons.util.ServerPrefUtils;
 import org.opensha.commons.util.bugReports.BugReport;
 import org.opensha.commons.util.bugReports.BugReportDialog;
 import org.opensha.commons.util.bugReports.DefaultExceptionHandler;
 import org.opensha.sha.calc.IM_EventSet.AbstractIMEventSetCalc;
+import org.opensha.sha.calc.IM_EventSet.IMEventSetERFUtils;
 import org.opensha.sha.calc.IM_EventSet.IM_EventSetOutputWriter;
 import org.opensha.sha.calc.IM_EventSet.outputImpl.HAZ01Writer;
 import org.opensha.sha.calc.IM_EventSet.outputImpl.OriginalModWriter;
-import org.opensha.sha.earthquake.ERF_Ref;
 import org.opensha.sha.earthquake.ERF;
 import org.opensha.sha.gui.HazardCurveApplication;
 import org.opensha.sha.gui.beans.ERF_GuiBean;
@@ -70,7 +65,7 @@ public class IMEventSetCalculatorGUI extends JFrame implements ActionListener {
         try {
             AbstractIMEventSetCalc.initLogger(Level.WARNING);
 
-            erfGuiBean = createERF_GUI_Bean();
+            erfGuiBean = IMEventSetERFUtils.createERF_GUI_Bean();
             imtChooser = new IMT_ChooserPanel();
             sitesPanel = new SitesPanel();
             imrChooser = new IMR_ChooserPanel(imtChooser, sitesPanel);
@@ -185,38 +180,6 @@ public class IMEventSetCalculatorGUI extends JFrame implements ActionListener {
 
         }
     }
-
-	private ERF_GuiBean createERF_GUI_Bean() {
-        // The following ERFs are excluded as they do not work for IM Event Set Calculations
-        ArrayList<ERF_Ref> erfExcludedRefs = new ArrayList<>(List.of(
-                ERF_Ref.WGCEP_02_WRAPPED_LIST,      // "WG02 Fortran Wrapped ERF List"
-                ERF_Ref.STEP_ALASKA,                // "STEP Alaskan Pipeline ERF"
-                ERF_Ref.POISSON_FAULT,              // "Poisson Fault ERF"
-                ERF_Ref.POISSON_FLOATING_FAULT,     // "Floating Poisson Fault ERF"
-                ERF_Ref.PEER_MULTI_SOURCE,          // "PEER Multi Source"
-                ERF_Ref.PEER_NON_PLANAR_FAULT,      // "PEER Non Planar Fault Forecast"
-                ERF_Ref.PEER_AREA,                  // "PEER Area Forecast"
-                ERF_Ref.PEER_LOGIC_TREE,            // "PEER Logic Tree ERF List"
-                ERF_Ref.UCERF_2_TIME_INDEP_LIST,    // "UCERF2 ERF Epistemic List"
-                ERF_Ref.UCERF3_EPISTEMIC,           // "UCERF3 Epistemic List ERF"
-                ERF_Ref.WGCEP_02,                   // "WG02 Eqk Rup Forecast"
-                ERF_Ref.WGCEP_02_LIST,              // "WG02 ERF List"
-                ERF_Ref.POINT_SOURCE_MULTI_VERT,    // "Point 2 Mult Vertical SS Fault ERF"
-                ERF_Ref.POINT_SOURCE_MULTI_VERT_LIST, // "Point2Mult Vertical SS Fault ERF List"
-                ERF_Ref.YUCCA_MOUNTAIN_LIST,        // "Yucca Mountain ERF Epistemic List"
-                ERF_Ref.YUCCA_MOUNTAIN,             // "Yucca mountain Adj. ERF"
-                ERF_Ref.POINT_SOURCE                // "Point Source ERF"
-        ));
-        try {
-            ERF_GuiBean erfGuiBean = new ERF_GuiBean(ERF_Ref.get(false, ServerPrefUtils.SERVER_PREFS));
-            erfGuiBean.removeERFs_FromList(erfExcludedRefs);
-            return erfGuiBean;
-        } catch (InvocationTargetException e) {
-            // Handle exception if removal fails
-            e.printStackTrace();
-            throw new RuntimeException(e);
-        }
-	}
 
     private boolean isReadyForCalc(ArrayList<Location> locs, ArrayList<ArrayList<SiteDataValue<?>>> dataLists,
 			ERF erf, ArrayList<ScalarIMR> imrs, ArrayList<String> imts) {
