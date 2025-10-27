@@ -466,13 +466,16 @@ implements ParameterChangeWarningListener {
 
         ERF_Ref erfRef = erfNameMap.get(erfName);
         // For backwards compatibility, these ERFs are hardcoded with special default parameters.
-		if (erfName.equals(Frankel02_AdjustableEqkRupForecast.NAME)) {
+		if (erfName.equals(Frankel02_AdjustableEqkRupForecast.NAME)
+                || erfName.equals(Frankel02_AdjustableEqkRupForecast.class.getSimpleName())) {
             createFrankel02Forecast();
-        } else if (erfName.equals(WGCEP_UCERF1_EqkRupForecast.NAME)) {
+        } else if (erfName.equals(WGCEP_UCERF1_EqkRupForecast.NAME)
+                || erfName.equals(WGCEP_UCERF1_EqkRupForecast.class.getSimpleName())) {
             createUCERF1_Forecast();
-        } else if (erfName.equals(MeanUCERF2.NAME)) {
+        } else if (erfName.equals(MeanUCERF2.NAME)
+                || erfName.equals(MeanUCERF2.class.getSimpleName())) {
             createMeanUCERF2_Forecast();
-        } else if (erfName.startsWith("Mean UCERF3")) {
+        } else if (erfName.startsWith("Mean UCERF3") || erfName.startsWith("UCERF3")) {
             createMeanUCERF3_Forecast(erfName);
         } else if (erfRef != null) {
             // Non-hardcoded ERFs are created with default parameters.
