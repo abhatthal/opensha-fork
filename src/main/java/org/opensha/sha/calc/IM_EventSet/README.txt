@@ -12,14 +12,29 @@ Note that this format has since been adapted to support SA periods with precisio
 To turn on debug messages, supply the --d flag for some information messages, --dd for more finely tuned messages, and --ddd for highly detailed tracing information. 
 
 For Example :
+java -jar -Xmx500M IMEventSetCalculatorCLT.jar \
+                        --erf MeanUCERF2 \
+                        --background-seismicity Exclude \
+                        --rupture-offset 5 \
+                        --imts "PGA,SA200,SA 1.0" \
+                        --atten-rels-file ExampleAttenRelsInputFileCLT.txt \
+                        --sites ExampleSitesInputFileCLT.csv \
+                        --output-dir ExampleOutputDir
 
-java -jar -Xmx500M IMEventSetCalculatorCLT.jar ExampleInputFileCLT.txt ExampleOutputDir
+Or alternatively with the legacy input format:
+java -jar -Xmx500M IMEventSetCalculatorCLT.jar ExampleLegacyInputFileCLT.txt ExampleLegacyOutputDir
 
 It will run the application IMEventSetCalculatorCLT.jar with the input file ExampleInputFileCLT.txt, which must exist in the same location as the IMEventSetCalculatorCLT.jar application, and will create the output files in the directory ExampleOutputDir.
 
 NOTE: If you see an error message mentioning Java heap space, GC Overhead, or anything with "Memory" in the message, increase the memory to java by replacing the default "-Xmx500M" argument in the above example with "-Xmx2G". This allocates 2 GB of memory. Increase further (-Xmx3G, ...) if that still fails.
 
-An example input file is included in this directory as "ExampleInputFileCLT.txt".
+An example input file is included in this directory as "ExampleLegacyInputFileCLT.txt".
+This txt file has all the inputs for the legacy format in one large file.
+
+The new format uses a Sites CSV file, "ExampleSitesInputFileCLT.csv" without headers.
+You can also pass an IMR input File, "ExampleAttenRelsInputFileCLT.txt" with an IMR on each line and "#" line-comments.
+Note that the legacy input file and new format input files are mutually exclusive.
+
 
 Each line of the input file that starts with "#" is a comment that gets ignored by the program (they are just for user's information).
 
@@ -56,6 +71,8 @@ Mean UCERF3
 or
 MeanUCERF3
 as the first choice. Either long or short name formats will result in the same choice.
+
+Use `java -jar IMEventSetCalculatorCLT.jar --list-erfs` to see an updated list of available ERFs.
 
 
 All adjustable parameters for these ERFs are hard-wired in the code to default/official settings; only whether to include the background/grid sources and the offset for floating ruptures are set in the input file.
@@ -108,12 +125,4 @@ Find the distance (km) from the this middleLat & middleLon to maxLat & maxLon, a
 
 During the calculation, ignore (skip) any ruptures that our outside the circle defined by this combined distance from middleLat and middleLon.
 
-This procedure insures a uniform set of ruptures for all sites.
-
-
-Future enhancements to this application
-----------------------------------------
-
-1) Write mean and stddevs to separate output files.
-
-2) Provide more metadata
+This procedure ensures a uniform set of ruptures for all sites.
