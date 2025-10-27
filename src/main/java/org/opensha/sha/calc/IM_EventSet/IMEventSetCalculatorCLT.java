@@ -6,8 +6,10 @@ import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.*;
+import java.util.regex.*;
 import java.util.logging.Level;
 
+import org.apache.commons.cli.*;
 import org.opensha.commons.data.siteData.OrderedSiteDataProviderList;
 import org.opensha.commons.data.siteData.SiteData;
 import org.opensha.commons.data.siteData.SiteDataValue;
@@ -46,14 +48,6 @@ import org.opensha.sha.imr.AttenuationRelationship;
 import org.opensha.sha.imr.ScalarIMR;
 import org.opensha.sha.imr.attenRelImpl.USGS_Combined_2004_AttenRel;
 
-import org.apache.commons.cli.CommandLine;
-import org.apache.commons.cli.CommandLineParser;
-import org.apache.commons.cli.DefaultParser;
-import org.apache.commons.cli.HelpFormatter;
-import org.apache.commons.cli.Option;
-import org.apache.commons.cli.Options;
-import org.apache.commons.cli.ParseException;
-
 import com.google.common.base.Preconditions;
 
 import scratch.UCERF3.erf.mean.MeanUCERF3;
@@ -86,19 +80,18 @@ implements ParameterChangeWarningListener {
 	// Static IMT names
 	protected ArrayList<String> supportedIMTs;
 
-	protected String inputFileName = "MeanSigmaCalc_InputFile.txt";
-	protected String dirName = "MeanSigma";
+	protected String dirName = "MeanSigma"; // default output dir name
+	private File outputDir;
 	
-	private final File outputDir;
-	
-	private final OrderedSiteDataProviderList providers;
-	
+
 	private ArrayList<ArrayList<SiteDataValue<?>>> userDataVals;
 
     // All supported ERFs - call .instance() to get the BaseERF
-    private static final Set<ERF_Ref> erfRefs = ERF_Ref.get(false, ServerPrefUtils.SERVER_PREFS);
+    private static final Set<ERF_Ref> erfRefs = IMEventSetERFUtils.getSupportedERFs();
     // Map of ERF names to their references for quick lookup
     private static final Map<String, ERF_Ref> erfNameMap = new HashMap<>();
+    private static final ArrayList<String> erfShortNames = new ArrayList<>();
+    private static final ArrayList<String> erfLongNames = new ArrayList<>();
 
     /**
 	 *  ArrayList that maps picklist attenRel string names to the real fully qualified
@@ -106,6 +99,7 @@ implements ParameterChangeWarningListener {
 	 */
 	private static final ArrayList<String> attenRelClasses = new ArrayList<>();
 	private static final ArrayList<String> imNames = new ArrayList<>();
+    private static final OrderedSiteDataProviderList providers;
 
 	static {
         // Initialize ERF name map
@@ -115,6 +109,8 @@ implements ParameterChangeWarningListener {
             String erfShortName = ref.getERFClass().getSimpleName();
             erfNameMap.put(erfName, ref);
             erfNameMap.put(erfShortName, ref);
+            erfShortNames.add(erfShortName);
+            erfLongNames.add(erfName);
         }
 
 //		imNames.add(CY_2006_AttenRel.NAME);
@@ -168,29 +164,112 @@ implements ParameterChangeWarningListener {
 				// skip that IMR
 			}
 		}
+        ArrayList<SiteData<?>> p = new ArrayList<>();
+        try {
+            p.add(new WillsMap2006());
+        } catch (IOException e) {
+            throw ExceptionUtils.asRuntimeException(e);
+        }
+        providers = new OrderedSiteDataProviderList(p);
+        // disable non-Vs30 providers
+        for (int i=0; i<providers.size(); i++) {
+            if (!providers.getProvider(i).getDataType().equals(SiteData.TYPE_VS30))
+                providers.setEnabled(i, false);
+        }
 	}
 
+    /**
+     * Legacy constructor for parsing legacy input file.
+     * @param inpFile
+     * @param outDir
+     */
 	public IMEventSetCalculatorCLT(String inpFile, String outDir) {
-		inputFileName = inpFile;
-		dirName = outDir;
-		outputDir = new File(dirName);
-		
-//		providers = OrderedSiteDataProviderList.createCompatibilityProviders(false);
-		ArrayList<SiteData<?>> p = new ArrayList<>();
-		try {
-			p.add(new WillsMap2006());
-		} catch (IOException e) {
-			throw ExceptionUtils.asRuntimeException(e);
-		}
-		providers = new OrderedSiteDataProviderList(p);
-		// disable non-Vs30 providers
-		for (int i=0; i<providers.size(); i++) {
-			if (!providers.getProvider(i).getDataType().equals(SiteData.TYPE_VS30))
-				providers.setEnabled(i, false);
-		}
+        String inputFileName = "MeanSigmaCalc_InputFile.txt"; // Default
+        if (!(inpFile == null || inpFile.isEmpty())) {
+            inputFileName = inpFile;
+        }
+        if (!(outDir == null || outDir.isEmpty())) {
+            dirName = outDir;
+            outputDir = new File(dirName);
+        }
+        try {
+            parseLegacyInputFile(inputFileName);
+        } catch (Exception ex) {
+            logger.log(Level.INFO, "Error parsing input file!", ex);
+            System.exit(1);
+        }
 	}
 
-	public void parseFile() throws IOException {
+    /**
+     * New input constructor with improved flexibility
+     * @param erfName           String for short or long name of the ERF
+     * @param bgSeismicity
+     * @param rupOffset
+     * @param attenRelNames     All IMR names as list of strings
+     * @param imtNames          All IMT names as list of strings
+     * @param siteFile
+     * @param outDir
+     */
+    public IMEventSetCalculatorCLT(String erfName,
+                                   String bgSeismicity,
+                                   double rupOffset,
+                                   ArrayList<String> attenRelNames,
+                                   ArrayList<String> imtNames,
+                                   String siteFile,
+                                   String outDir) {
+        getERF(erfName);
+        toApplyBackGroud(bgSeismicity);
+        setRupOffset(rupOffset);
+        for (String attenRel : attenRelNames) {
+            setIMR(attenRel);
+        }
+        for (String imt : imtNames) {
+            setIMT(imt);
+        }
+        if (siteFile == null || siteFile.isEmpty()) {
+            // If no sites file provided, default to 1 site in LA with Vs30 760m/s
+            setSite("34.1 -118.1 760");
+        } else {
+            try {
+                parseSitesInputCSV(siteFile);
+            } catch (Exception ex) {
+                logger.log(Level.INFO, "Error parsing input file!", ex);
+                System.exit(1);
+            }
+        }
+        if (!(outDir == null || outDir.isEmpty())) {
+            dirName = outDir;
+            outputDir = new File(dirName);
+        }
+    }
+
+    /**
+     * For new input format, sites are collected directly from a CSV file
+     * @param siteFile
+     */
+    private void parseSitesInputCSV(String siteFile) throws IOException {
+        ArrayList<String> fileLines;
+
+        logger.log(Level.INFO, "Parsing sites input file: " + siteFile);
+
+        fileLines = FileUtils.loadFile(siteFile);
+        if (fileLines.isEmpty()) {
+            throw new RuntimeException("Input file empty or doesn't exist! " + siteFile);
+        }
+        for (String fileLine : fileLines) {
+            String line = fileLine.trim();
+            // if it is comment skip to next line
+            if (line.startsWith("#") || line.isEmpty()) continue;
+            setSite(line, ",");
+        }
+    }
+
+    /**
+     * Legacy input format parses every input with one large TXT file
+     * @param inputFileName
+     * @throws IOException
+     */
+	private void parseLegacyInputFile(String inputFileName) throws IOException {
 		ArrayList<String> fileLines;
 		
 		logger.log(Level.INFO, "Parsing input file: " + inputFileName);
@@ -251,46 +330,56 @@ implements ParameterChangeWarningListener {
         }
 	}
 
+    private void setSite(String line) {
+        // Default delimiter: any whitespace
+        setSite(line, "\\s+");
+    }
+
 	/**
-	 * Gets the list of locations with their Wills Site Class values
+	 * Gets the list of locations with their Wills Site Class or Vs30 values
 	 * @param line String
+     * @param delim Delimiter
 	 */
-	private void setSite(String line){
-		if(locList == null)
-			locList = new LocationList();
-		if (userDataVals == null)
-			userDataVals = new ArrayList<ArrayList<SiteDataValue<?>>>();
-		StringTokenizer st = new StringTokenizer(line);
-		int tokens = st.countTokens();
-		if(tokens > 3 || tokens < 2){
-			throw new RuntimeException("Must Enter valid Lat Lon in each line in the file");
-		}
-		double lat = Double.parseDouble(st.nextToken().trim());
-		double lon = Double.parseDouble(st.nextToken().trim());
-		Location loc = new Location(lat,lon);
-		locList.add(loc);
-		ArrayList<SiteDataValue<?>> dataVals = new ArrayList<SiteDataValue<?>>();
-		String dataVal = null;
-		if (tokens == 3) {
-			dataVal = st.nextToken().trim();
-		}
-		if (WillsMap2000.wills_vs30_map.containsKey(dataVal)) {
-			// this is a Wills Class
-			dataVals.add(new SiteDataValue<String>(SiteData.TYPE_WILLS_CLASS,
-					SiteData.TYPE_FLAG_MEASURED, dataVal));
-		} else if (dataVal != null) {
-			// Vs30 value
-			try {
-				double vs30 = Double.parseDouble(dataVal);
-				dataVals.add(new SiteDataValue<Double>(SiteData.TYPE_VS30,
-						SiteData.TYPE_FLAG_MEASURED, vs30));
-			} catch (NumberFormatException e) {
-				System.err.println("*** WARNING: Site Wills/Vs30 value unknown: " + dataVal);
-			}
-		}
-		userDataVals.add(dataVals);
-	}
-	
+    private void setSite(String line, String delim) {
+        if (locList == null)
+            locList = new LocationList();
+        if (userDataVals == null)
+            userDataVals = new ArrayList<ArrayList<SiteDataValue<?>>>();
+
+        // Split by the specified delimiter
+        String[] tokens = line.trim().split(delim);
+        int tokenCount = tokens.length;
+
+        if(tokenCount > 3 || tokenCount < 2) {
+            throw new RuntimeException("Must Enter valid Lat Lon in each line in the file");
+        }
+
+        double lat = Double.parseDouble(tokens[0].trim());
+        double lon = Double.parseDouble(tokens[1].trim());
+        Location loc = new Location(lat,lon);
+        locList.add(loc);
+        ArrayList<SiteDataValue<?>> dataVals = new ArrayList<SiteDataValue<?>>();
+        String dataVal = null;
+        if (tokenCount == 3) {
+            dataVal = tokens[2].trim();
+        }
+        if (WillsMap2000.wills_vs30_map.containsKey(dataVal)) {
+            // this is a Wills Class
+            dataVals.add(new SiteDataValue<String>(SiteData.TYPE_WILLS_CLASS,
+                    SiteData.TYPE_FLAG_MEASURED, dataVal));
+        } else if (dataVal != null) {
+            // Vs30 value
+            try {
+                double vs30 = Double.parseDouble(dataVal);
+                dataVals.add(new SiteDataValue<Double>(SiteData.TYPE_VS30,
+                        SiteData.TYPE_FLAG_MEASURED, vs30));
+            } catch (NumberFormatException e) {
+                System.err.println("*** WARNING: Site Wills/Vs30 value unknown: " + dataVal);
+            }
+        }
+        userDataVals.add(dataVals);
+    }
+
 	/**
 	 * Sets the supported IMTs as String
 	 * @param line String
@@ -368,7 +457,7 @@ implements ParameterChangeWarningListener {
     /**
      * Creates an ERF instance from the string parsed as an erfName.
      * ERFs are created with default parameters, with a few hardcoded exceptions.
-     * All values set in getERF can be overriden by custom parameters in `parseFile`.
+     * All values set in getERF can be overriden by custom parameters in `parseLegacyInputFile`.
      * @param line user input to parse into an erfName
      */
 	private void getERF(String line){
@@ -579,17 +668,85 @@ implements ParameterChangeWarningListener {
 
 	}
 
+    private static void listERFs() {
+        System.out.println("Available Earthquake Rupture Forecasts (ERFs):");
+        System.out.println("==============================================");
+        System.out.println();
+
+        // Find the maximum length of short names for proper alignment
+        int maxShortNameLength = 0;
+        for (String shortName : erfShortNames) {
+            if (shortName.length() > maxShortNameLength) {
+                maxShortNameLength = shortName.length();
+            }
+        }
+        // Ensure minimum width for alignment
+        maxShortNameLength = Math.max(maxShortNameLength, 10);
+
+        for (int i = 0; i < erfShortNames.size(); i++) {
+            String shortName = erfShortNames.get(i);
+            String longName = erfLongNames.get(i);
+            // Format the output with fixed width for short name
+            System.out.printf("%-" + maxShortNameLength + "s – %s%n", shortName, longName);
+        }
+
+        System.out.println();
+        System.out.println("Usage: imcalc -e \"FULL_NAME\" ... or imcalc -e ShortName ...");
+        System.out.println("Example: imcalc -e \"STEP Alaskan Pipeline ERF\" ...");
+        System.out.println("Example: imcalc -e STEP_AlaskanPipeForecast ...");
+    }
+
+    /**
+     * How to use the CLT with the new interface. Use `--help` to see this.
+     * @param options
+     */
     private static void printUsage(Options options) {
         HelpFormatter formatter = new HelpFormatter();
-        String header = "\nCompute Mean and Sigma for Attenuation Relationships and IMTs\n\n";
-        String footer = "\nExamples:\n" +
-                "  java -jar IMEventSetCLT.jar input.txt output/\n" +
-                "  java -jar IMEventSetCLT.jar --haz01 input.txt output/\n" +
-                "  java -jar IMEventSetCLT.jar -d input.txt output/\n" +
-                "  java -jar IMEventSetCLT.jar --help\n";
+        formatter.setOptionComparator(null); // Preserve declaration order
 
-        formatter.printHelp("IMEventSetCalculatorCLT [options] <inputFile> <outputDir>",
-                header, options, footer);
+        String header = "\nIM Event Set Calculator - Compute Mean and Sigma for Attenuation Relationships and IMTs\n\n";
+
+        String footer = "\nExample:\n" +
+                "  imcalc -e \"WGCEP (2007) UCERF2 - Single Branch\" \\\n" +
+                "         -b Exclude \\\n" +
+                "         -a \"Boore & Atkinson (2008)\",\"Chiou & Youngs (2008)\" \\\n" +
+                "         -m \"PGA,SA200,SA 1.0\" \\\n" +
+                "         -r 5 \\\n" +
+                "         -s sites.csv \\\n" +
+                "         -o results/\n\n" +
+                "Legacy-mode usage:\n" +
+                "  imcalc --legacy <legacy-input.txt> <output-dir>\n\n" +
+                "Note: Site data value (Vs30 or Wills Class) is optional in CSV file.\n" +
+                "      Use IMEventSetCalculatorGUI for more refined control of Site Parameters.\n" +
+                "      Legacy input file format is deprecated. Consider migrating to new-style options.\n";
+
+        formatter.printHelp("imcalc [OPTIONS] [--] [<legacy-file> <output-dir>]",
+                header, options, footer, true);
+    }
+
+    /**
+     * How to use the CLT with the legacy interface. Use `--legacy --help` to see this.
+     * @param options
+     */
+    private static void printLegacyUsage(Options options) {
+        HelpFormatter formatter = new HelpFormatter();
+        formatter.setOptionComparator(null); // Preserve declaration order
+
+        String header = "\nIM Event Set Calculator - Legacy Mode\n\n" +
+                "Uses fixed-format input file. See example input file for format details.\n\n";
+
+        String footer = "\nLegacy-mode usage:\n" +
+                "  imcalc --legacy <legacy-input.txt> <output-dir>\n\n" +
+                "Example:\n" +
+                "  imcalc --legacy ExampleLegacyInputFileCLT.txt output/\n" +
+                "  imcalc --legacy --haz01 ExampleLegacyInputFileCLT.txt output/\n" +
+                "  imcalc --legacy -d ExampleLegacyInputFileCLT.txt output/\n\n" +
+                "Note: Legacy input file format is deprecated.\n" +
+                "      Consider migrating to new command-line options for better flexibility.\n" +
+                "      Use 'imcalc --help' (without --legacy) to see new-style options.\n";
+
+        formatter.printHelp("imcalc --legacy [OPTIONS] <legacy-input.txt> <output-dir>",
+                header, options, footer, true);
     }
 
     private static Level getLogLevel(CommandLine cmd) {
@@ -600,12 +757,126 @@ implements ParameterChangeWarningListener {
         return Level.WARNING; // default
     }
 
-    private static Options createOptions() {
+    /**
+     * Creates all options that can be interpreted by either the new input format
+     * or the legacy input format.
+     * @return
+     */
+    private static Options createFullOptions() {
         Options options = new Options();
 
+        // Common options (available in both legacy and new-style)
         options.addOption(Option.builder("h")
                 .longOpt("help")
-                .desc("Print this help message")
+                .desc("Show this help and exit. Use `--legacy --help` for legacy-style help")
+                .build());
+
+        options.addOption(Option.builder()
+                .longOpt("list-erfs")
+                .desc("List available ERF short names and long names")
+                .build());
+
+        options.addOption(Option.builder()
+                .longOpt("haz01")
+                .desc("Use HAZ01 output file format instead of default")
+                .build());
+
+        options.addOption(Option.builder("d")
+                .desc("Set logging level to CONFIG (verbose)")
+                .build());
+
+        options.addOption(Option.builder("dd")
+                .desc("Set logging level to FINE (very verbose)")
+                .build());
+
+        options.addOption(Option.builder("ddd")
+                .desc("Set logging level to ALL (debug)")
+                .build());
+
+        options.addOption(Option.builder("q")
+                .longOpt("quiet")
+                .desc("Set logging level to OFF (quiet)")
+                .build());
+
+        // New-style only options
+        options.addOption(Option.builder("e")
+                .longOpt("erf")
+                .hasArg()
+                .argName("name")
+                .desc("Earthquake Rupture Forecast (ERF) - short code or full name in quotes")
+                .build());
+
+        options.addOption(Option.builder("b")
+                .longOpt("background-seismicity")
+                .hasArg()
+                .argName("type")
+                .desc("Include | Exclude | Only-Background")
+                .build());
+
+        options.addOption(Option.builder("r")
+                .longOpt("rupture-offset")
+                .hasArg()
+                .argName("km")
+                .desc("Rupture offset for floating ruptures (1-100 km; 5 km is generally best). Not applicable to UCERF3, but a value is still required.")
+                .build());
+
+        OptionGroup attenRelGroup = new OptionGroup(); // Mutually exclusive options
+        attenRelGroup.addOption(Option.builder("a")
+                .longOpt("atten-rels")
+                .hasArg()
+                .argName("IMR1,IMR2,...")
+                .desc("Comma-separated in quotation attenuation relations")
+                .build());
+        attenRelGroup.addOption(Option.builder("f")
+                .longOpt("atten-rels-file")
+                .hasArg()
+                .argName("file")
+                .desc("Newlines-separated IMR list (mutually exclusive with --atten-rels)")
+                .build());
+        options.addOptionGroup(attenRelGroup);
+
+        options.addOption(Option.builder("m")
+                .longOpt("imts")
+                .hasArg()
+                .argName("IMT1,IMT2,...")
+                .desc("Comma-separated intensity-measure types")
+                .build());
+
+        options.addOption(Option.builder("s")
+                .longOpt("sites")
+                .hasArg()
+                .argName("csv-file")
+                .desc("CSV of Lat, Lon, [Vs30/Wills] (column optional)")
+                .build());
+
+        options.addOption(Option.builder("o")
+                .longOpt("output-dir")
+                .hasArg()
+                .argName("dir")
+                .desc("Where to write results (defaults to current dir)")
+                .build());
+
+        options.addOption(Option.builder()
+                .longOpt("legacy")
+                .desc("Switch to legacy-file mode")
+                .build());
+
+        return options;
+    }
+
+    /**
+     * The old input format was positional arguments for one TXT file with all
+     * inputs and an output dir. These options are optional.
+     * Dedicated function for legacyOptions is needed to generate usage.
+     * @return
+     */
+    private static Options createLegacyOptions() {
+        Options options = new Options();
+
+        // Legacy mode only supports common options
+        options.addOption(Option.builder("h")
+                .longOpt("help")
+                .desc("Show legacy help and exit. Don't pass `--legacy` for new-style help.")
                 .build());
 
         options.addOption(Option.builder()
@@ -633,53 +904,187 @@ implements ParameterChangeWarningListener {
         return options;
     }
 
-	public static void main(String[] args) {
-        // Create CLI options
-        Options options = createOptions();
+    /**
+     * Process legacy input parameters that are not common to new interface.
+     * @param cmd optional arguments
+     * @param remainingArgs Positional arguments
+     * @return CLT instance constructed with legacy input params to use for calculation
+     */
+    private static IMEventSetCalculatorCLT processLegacyInput(
+            CommandLine cmd,
+            String[] remainingArgs) {
+        Options options = createLegacyOptions();
+        // Handle help option
+        if (cmd.hasOption("help")) {
+            printLegacyUsage(options);
+            System.exit(0);
+        }
 
+        logger.log(Level.WARNING, "Using deprecated legacy input file format. Consider migrating to new command-line options.");
+        logger.log(Level.WARNING, "See 'imcalc --help' for new-style usage.");
+
+        // Validate that new-style options are not used in legacy mode
+        String[] invalidOptions = {"erf", "background-seismicity", "atten-rels", "atten-rels-file", "imts", "sites", "output-dir"};
+        for (String option : invalidOptions) {
+            if (cmd.hasOption(option)) {
+                System.err.println("Error: Option --" + option + " is not supported in legacy mode");
+                System.err.println("Use a legacy input file or switch to new-style mode");
+                System.exit(2);
+            }
+        }
+
+        // Get the non-option arguments (positional arguments)
+        if (remainingArgs.length != 2) {
+            System.err.println("Error: Input file and output directory are required");
+            System.err.println("Expected 2 positional arguments, found: " + remainingArgs.length);
+            System.exit(2);
+        }
+        String inputFileName = remainingArgs[0];
+        String outputDirName = remainingArgs[1];
+
+        return new IMEventSetCalculatorCLT(inputFileName, outputDirName);
+    }
+
+    /**
+     * Process new style input parameters that are not common to legacy interface.
+     * @param cmd All arguments for parsing in the new input format
+     * @return CLT instance constructed with legacy input params to use for calculation
+     */
+    private static IMEventSetCalculatorCLT processNewStyleInput(CommandLine cmd) {
+        Options options = createFullOptions();
+        // Handle help option
+        if (cmd.hasOption("help")) {
+            printUsage(options);
+            System.exit(0);
+        }
+        // Show ERF options
+        if (cmd.hasOption("list-erfs")) {
+            listERFs();
+            System.exit(0);
+        }
+
+        // Check required OptionGroup for attenuation relationships
+        boolean hasAttenRels = cmd.hasOption("atten-rels");
+        boolean hasAttenRelsFile = cmd.hasOption("atten-rels-file");
+        if (!(hasAttenRels || hasAttenRelsFile)) {
+            System.err.println("Error: At least one of --atten-rels or --atten-rels-file must be specified");
+            printUsage(options);
+            System.exit(2);
+        }
+        // Check for required options without mutual exclusivity
+        String[] requiredOptions = {"erf", "background-seismicity", "rupture-offset", "imts", "output-dir"};
+        for (String option : requiredOptions) {
+            if (!cmd.hasOption(option)) {
+                System.err.println("Error: Required option --" + option + " is missing");
+                printUsage(options);
+                System.exit(2);
+            }
+        }
+
+        String erfName = cmd.getOptionValue("erf");
+        // bgSeis value is ignored if ERF doesn't support it
+        String bgSeis = cmd.getOptionValue("background-seismicity");
+        double rupOffset = Double.parseDouble(cmd.getOptionValue("rupture-offset"));
+        ArrayList<String> attenRels;
+        if (hasAttenRels) {
+            attenRels = parseQuotedString(cmd.getOptionValue("atten-rels"));
+            System.out.println(attenRels);
+        } else {
+            try {
+                attenRels = FileUtils.loadFile(cmd.getOptionValue("atten-rels-file"));
+                // Filter comments out of attenRels input TXT file
+                attenRels.removeIf(s -> s.startsWith("#"));
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+        ArrayList<String> imts = new ArrayList<>(List.of(cmd.getOptionValue("imts").split(",")));
+
+        String sites = null;
+        if (cmd.hasOption("sites")) {
+            sites = cmd.getOptionValue("sites");
+        }
+
+        String outputDirName = cmd.getOptionValue("output-dir");
+
+        return new IMEventSetCalculatorCLT(erfName, bgSeis, rupOffset,
+                attenRels, imts, sites, outputDirName);
+    }
+
+    /**
+     * A string of values where each value in quotes is separated into a list
+     * @param csvString     "first","second, with a comma","third"
+     * @return              ["first", "second, with a comma", "third"]
+     */
+    private static ArrayList<String> parseQuotedString(String csvString) {
+        ArrayList<String> values = new ArrayList<>();
+        if (csvString == null || csvString.trim().isEmpty()) {
+            return values;
+        }
+
+        // Split by comma, but be careful with quoted strings
+        // This regex splits on commas that are NOT inside quotes
+        String[] parts = csvString.split(",(?=(?:[^\"]*\"[^\"]*\")*[^\"]*$)");
+
+        for (String part : parts) {
+            part = part.trim();
+            if (part.startsWith("\"") && part.endsWith("\"")) {
+                // Remove surrounding quotes
+                values.add(part.substring(1, part.length() - 1));
+            } else {
+                values.add(part);
+            }
+        }
+        return values;
+    }
+
+
+    /**
+     * Entry point to CLT. Parses input to determine input mode (new-style vs legacy),
+     * directly processes common parameters, and calls the appropriate processor.
+     * Exits with 0 on success, 1 on failure, and 2 on invalid input.
+     * @param args
+     */
+	public static void main(String[] args) {
+        // First, parse with full options to detect mode
+        Options options = createFullOptions();
         CommandLineParser parser = new DefaultParser();
         CommandLine cmd = null;
 
         try {
-            cmd = parser.parse(options, args);
+            cmd = parser.parse(options, args, true); // Stop at non-option
         } catch (ParseException e) {
             System.err.println("Error parsing command line: " + e.getMessage());
             printUsage(options);
             System.exit(2);
         }
 
-        // Handle help option
-        if (cmd.hasOption("help")) {
-            printUsage(options);
-            System.exit(0);
-        }
-
-        // Extract values from command line
-        boolean haz01 = cmd.hasOption("haz01");
-        Level level = getLogLevel(cmd);
-
-        // Get the non-option arguments (positional arguments)
+        // Determine mode
+        boolean legacyMode = cmd.hasOption("legacy");
         String[] remainingArgs = cmd.getArgs();
-        if (remainingArgs.length != 2) {
-            System.err.println("Error: Input file and output directory are required");
-            System.err.println("Expected 2 positional arguments, found: " + remainingArgs.length);
-            printUsage(options);
-            System.exit(2);
-        }
-        String inputFileName = remainingArgs[0];
-        String outputDirName = remainingArgs[1];
 
+        Level level = getLogLevel(cmd);
         initLogger(level);
 
-        IMEventSetCalculatorCLT calc = new IMEventSetCalculatorCLT(inputFileName, outputDirName);
-
-        try {
-            calc.parseFile();
-        } catch (Exception ex) {
-            logger.log(Level.INFO, "Error parsing input file!", ex);
-            System.exit(1);
+        // If legacy mode not explicitly set but .txt file detected, use legacy mode
+        // This effectively means that the --legacy flag is optional and existing users
+        // of the legacy format won't be impacted by the new input format.
+        if (!legacyMode && remainingArgs.length > 0 && remainingArgs[0].toLowerCase().endsWith(".txt")) {
+            legacyMode = true;
         }
 
+        // Output mode
+        boolean haz01 = cmd.hasOption("haz01");
+
+        // Process input according to legacy or new input mode and initialize calculator
+        IMEventSetCalculatorCLT calc = null;
+        if (legacyMode) {
+            calc = processLegacyInput(cmd, remainingArgs);
+        } else {
+           calc = processNewStyleInput(cmd);
+        }
+
+        // Invoke calculator
         try {
             calc.getMeanSigma(haz01);
         } catch (IOException e) {
@@ -687,6 +1092,7 @@ implements ParameterChangeWarningListener {
             System.exit(1);
         }
         System.exit(0);
+
 	}
 
 	public int getNumSites() {
