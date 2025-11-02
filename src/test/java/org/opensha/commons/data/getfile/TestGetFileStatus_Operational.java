@@ -1,11 +1,10 @@
-package org.opensha.commons.data.siteData;
+package org.opensha.commons.data.getfile;
 
 import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
 import java.net.URI;
-import java.util.concurrent.ExecutionException;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -15,13 +14,11 @@ import org.apache.commons.io.FileUtils;
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_Downloader;
 import org.scec.getfile.GetFile;
 
-import scratch.UCERF3.erf.mean.MeanUCERF3;
-
 /**
  * Tests to verify all GetFile endpoints are operational
  */
 public class TestGetFileStatus_Operational {
-	private static final String CLIENT_ROOT = "src/test/resources/org/opensha/commons/data/siteData/getfile";
+	private static final String CLIENT_ROOT = "src/test/resources/org/opensha/commons/data/getfile";
 	private static final boolean D = true;
 	
 	/**
