@@ -26,7 +26,6 @@ import org.opensha.sha.earthquake.faultSysSolution.FaultSystemSolution;
 import org.opensha.sha.earthquake.faultSysSolution.modules.RupMFDsModule;
 import org.opensha.sha.earthquake.param.ProbabilityModelOptions;
 import org.opensha.sha.earthquake.param.ProbabilityModelParam;
-import org.scec.getfile.GetFile;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
@@ -36,6 +35,7 @@ import scratch.UCERF3.enumTreeBranches.FaultModels;
 import scratch.UCERF3.erf.FaultSystemSolutionERF;
 import scratch.UCERF3.utils.LastEventData;
 import scratch.UCERF3.utils.UCERF3_DataUtils;
+import scratch.UCERF3.utils.UCERF3_Downloader;
 
 /**
  * This is the MeanUCERF3 ERF. It extends UCERF3_FaultSysSol_ERF, but allows and facilitates creation
@@ -64,9 +64,6 @@ public class MeanUCERF3 extends FaultSystemSolutionERF {
 	 private static final boolean D = false;
 	
 	public static final String NAME = "Mean UCERF3";
-	
-	private static final String DOWNLOAD_URL = "https://g-c662a6.a78b8.36fe.data.globus.org/getfile/ucerf3/ucerf3.json";
-	// static final String DOWNLOAD_URL = "https://"+ServerPrefUtils.SERVER_PREFS.getHostName()+"/ftp/ucerf3_erf_modular/";
 	
 	static final String RAKE_BASIS_FILE_NAME = "rake_basis.zip";
 	static final String TRUE_MEAN_FILE_NAME = "mean_ucerf3_sol.zip";
@@ -641,14 +638,8 @@ public class MeanUCERF3 extends FaultSystemSolutionERF {
 	 */
 	public static CompletableFuture<File> checkDownload(
 			File file, boolean showProgress) {
-		final GetFile UCERF3_UPDATER = new GetFile(
-				/*name=*/"MeanUCERF3",
-				/*clientMetaFile=*/new File(
-						file.getParent(), "ucerf3_client.json"),
-				/*serverMetaURI=*/URI.create(DOWNLOAD_URL),
-				/*showProgress=*/showProgress);
 		String fileKey = FilenameUtils.getBaseName(file.getName());
-		return UCERF3_UPDATER.updateFile(fileKey);
+		return new UCERF3_Downloader(showProgress).updateFile(fileKey);
 	}
 
 	public static void main(String[] args) {

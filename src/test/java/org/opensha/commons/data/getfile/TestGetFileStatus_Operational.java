@@ -4,7 +4,6 @@ import static org.junit.Assert.assertTrue;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.URI;
 
 import org.junit.Before;
 import org.junit.Test;
@@ -12,7 +11,7 @@ import org.junit.Test;
 import org.apache.commons.io.FileUtils;
 
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_Downloader;
-import org.scec.getfile.GetFile;
+import scratch.UCERF3.utils.UCERF3_Downloader;
 
 /**
  * Tests to verify all GetFile endpoints are operational
@@ -42,13 +41,7 @@ public class TestGetFileStatus_Operational {
 	@Test(timeout = 20000)
 	public void testUCERF3() {
 		if (D) System.out.println("TestGetFileStatus_Operational.testUCERF3()");
-		new GetFile(
-				/*name=*/"MeanUCERF3",
-				/*clientMetaFile=*/new File(
-						System.getProperty("user.home"), ".opensha/ucerf3/ucerf3_client.json"),
-				/*serverMetaURI=*/URI.create(
-						"https://g-c662a6.a78b8.36fe.data.globus.org/getfile/ucerf3/ucerf3.json"),
-				/*showProgress=*/false);
+	    new UCERF3_Downloader(/*showProgress=*/false);
 		File serverMeta = new File(
 				System.getProperty("user.home"), ".opensha/ucerf3/ucerf3_client.json");
 		assertTrue(serverMeta.exists());

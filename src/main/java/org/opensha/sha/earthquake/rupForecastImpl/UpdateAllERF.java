@@ -4,7 +4,7 @@ import java.io.File;
 import java.io.FileReader;
 import java.io.IOException;
 import java.io.Reader;
-import java.net.URI;
+import java.util.Map;
 import java.util.concurrent.ExecutionException;
 
 import org.opensha.sha.earthquake.rupForecastImpl.nshm23.util.NSHM23_Downloader;
@@ -12,6 +12,7 @@ import org.scec.getfile.GetFile;
 
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import scratch.UCERF3.utils.UCERF3_Downloader;
 
 /**
  * Test that we're able to download all ERF data using GetFile.
@@ -21,10 +22,10 @@ import com.google.gson.JsonParser;
 public class UpdateAllERF {
 	/**
 	 * Returns a list of all key entries from the JSON
-	 * @param csvFile The metadata file listing all JSON entries
+	 * @param jsonFile The metadata file listing all JSON entries
 	 * @return
 	 */
-	private static final String[] getModels(File jsonFile) {
+	private static String[] getModels(File jsonFile) {
 		try (Reader reader = new FileReader(jsonFile)) {
 			JsonObject jsonObject = JsonParser.parseReader(reader).getAsJsonObject();
 			String[] keys = jsonObject.keySet().toArray(new String[0]);
@@ -63,24 +64,13 @@ public class UpdateAllERF {
 	}
 		
 	public static void main(String[] args) {
-		final GetFile UCERF3_DOWNLOADER = new GetFile(
-				/*name=*/"UCERF3",
-				/*clientMetaFile=*/new File(
-						System.getProperty("user.home"), ".opensha/ucerf3/ucerf3_client.json"),
-				/*serverMetaURI=*/URI.create(
-						"https://g-c662a6.a78b8.36fe.data.globus.org/getfile/ucerf3/ucerf3.json"),
-				/*showProgress=*/false);
-		final GetFile NSHM23_DOWNLOADER =
-				new NSHM23_Downloader(/*showProgress=*/false);
-		
-		boolean allUpdated = updateERF("ucerf3", UCERF3_DOWNLOADER) &&
-							 updateERF("nshm23", NSHM23_DOWNLOADER);
-		
-		if (allUpdated) {
-			System.out.println("All ERFs were updated successfully!");
-		} else {
-			System.out.println("Failed to update all ERFs!");
-		}
+        boolean showProgress = false;
+        Map<String, GetFile> downloaders = Map.of(
+                "ucerf3", new UCERF3_Downloader(showProgress),
+                "nshm23", new NSHM23_Downloader(showProgress)
+        );
+        for (var entry : downloaders.entrySet()) {
+            updateERF(entry.getKey(), entry.getValue());
+        }
 	}
-
 }
