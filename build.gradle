@@ -147,5 +147,5 @@ task appZipIM(type: Zip) {
 }
 
 task appJars(type: GradleBuild) {
-     tasks = ['appJarHC', 'appJarHS', 'appJarAR', 'appJarSM', 'appJarSD', 'appJarGMT', 'appJarIM-CLT', 'appJarIM-GUI']
+     tasks = ['appJarHC', 'appJarHS', 'appJarAR', 'appJarSM', 'appJarSD', 'appJarGMT', 'appZipIM', 'appJarIM-GUI']
 }
