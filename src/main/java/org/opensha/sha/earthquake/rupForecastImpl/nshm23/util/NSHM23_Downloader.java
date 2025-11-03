@@ -16,7 +16,7 @@ import org.scec.getfile.GetFile;
 public class NSHM23_Downloader extends GetFile {
 	private static final List<URI> ENDPOINTS = List.of(
             URI.create("https://g-3a9041.a78b8.36fe.data.globus.org/getfile/nshm23/nshm23.json"),  // CARC project2
-            URI.create("https://g-c662a6.a78b8.36fe.data.globus.org/getfile/nshm23/nshm23.json")   // CARC project1
+            URI.create("https://g-c662a6.a78b8.36fe.data.globus.org/getfile/nshm23/nshm23.json")   // CARC project
     );
 	
 	/**
