@@ -62,7 +62,7 @@ public class UCERF3_Downloader extends GetFile {
      */
     private static File getStoreDir() {
         Path storeDir = Paths.get(
-                System.getProperty("user.home"), ".opensha", "ucerf3");
+                System.getProperty("user.home"), ".opensha", "ucerf3_erf");
         try {
             Files.createDirectories(storeDir);
         } catch (IOException e) {

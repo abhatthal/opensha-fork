@@ -639,7 +639,7 @@ public class MeanUCERF3 extends FaultSystemSolutionERF {
 	public static CompletableFuture<File> checkDownload(
 			File file, boolean showProgress) {
 		String fileKey = FilenameUtils.getBaseName(file.getName());
-		return new UCERF3_Downloader(showProgress).updateFile(fileKey);
+		return new UCERF3_Downloader(getStoreDir(), showProgress).updateFile(fileKey);
 	}
 
 	public static void main(String[] args) {
