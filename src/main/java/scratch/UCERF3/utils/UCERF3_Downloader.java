@@ -60,9 +60,9 @@ public class UCERF3_Downloader extends GetFile {
      * Get the default store directory for UCERF3 file downloads
      * @return	Default store directory to use in default constructor.
      */
-    private static File getStoreDir() {
+    public static File getStoreDir() {
         Path storeDir = Paths.get(
-                System.getProperty("user.home"), ".opensha", "ucerf3_erf");
+                System.getProperty("user.home"), ".opensha", "ucerf3");
         try {
             Files.createDirectories(storeDir);
         } catch (IOException e) {

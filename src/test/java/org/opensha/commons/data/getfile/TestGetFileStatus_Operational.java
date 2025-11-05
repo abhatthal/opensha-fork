@@ -43,7 +43,7 @@ public class TestGetFileStatus_Operational {
 		if (D) System.out.println("TestGetFileStatus_Operational.testUCERF3()");
 	    new UCERF3_Downloader(/*showProgress=*/false);
 		File serverMeta = new File(
-				System.getProperty("user.home"), ".opensha/ucerf3_erf/ucerf3_client.json");
+				System.getProperty("user.home"), ".opensha/ucerf3/ucerf3_client.json");
 		assertTrue(serverMeta.exists());
 	}
 

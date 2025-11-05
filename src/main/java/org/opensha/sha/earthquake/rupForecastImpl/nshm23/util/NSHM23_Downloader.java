@@ -60,7 +60,7 @@ public class NSHM23_Downloader extends GetFile {
 	 * Get the default store directory for NSHM23 file downloads
 	 * @return	Default store directory to use in default constructor.
 	 */
-	private static File getStoreDir() {
+	public static File getStoreDir() {
 		Path storeDir = Paths.get(
 				System.getProperty("user.home"), ".opensha", "nshm23");
 		try {

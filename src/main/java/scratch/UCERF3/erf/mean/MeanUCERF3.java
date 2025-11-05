@@ -2,7 +2,6 @@ package scratch.UCERF3.erf.mean;
 
 import java.io.File;
 import java.io.IOException;
-import java.net.URI;
 import java.util.ArrayList;
 import java.util.EnumSet;
 import java.util.List;
@@ -135,7 +134,8 @@ public class MeanUCERF3 extends FaultSystemSolutionERF {
 			return name;
 		}
 	}
-	
+
+    @Deprecated
 	public static File getStoreDir() {
 		// first check user prop
 		String path = System.getProperty("uc3.store");
@@ -173,7 +173,7 @@ public class MeanUCERF3 extends FaultSystemSolutionERF {
 	}
 	
 	public MeanUCERF3() {
-		this(getStoreDir());
+		this(UCERF3_Downloader.getStoreDir());
 	}
 	
 	public MeanUCERF3(File storeDir) {
@@ -181,7 +181,7 @@ public class MeanUCERF3 extends FaultSystemSolutionERF {
 	}
 
 	public MeanUCERF3(FaultSystemSolution meanTotalSol) {
-		this(meanTotalSol, getStoreDir());
+		this(meanTotalSol, UCERF3_Downloader.getStoreDir());
 	}
 	
 	public MeanUCERF3(FaultSystemSolution meanTotalSol, File storeDir) {
@@ -639,12 +639,12 @@ public class MeanUCERF3 extends FaultSystemSolutionERF {
 	public static CompletableFuture<File> checkDownload(
 			File file, boolean showProgress) {
 		String fileKey = FilenameUtils.getBaseName(file.getName());
-		return new UCERF3_Downloader(getStoreDir(), showProgress).updateFile(fileKey);
+		return new UCERF3_Downloader(showProgress).updateFile(fileKey);
 	}
 
 	public static void main(String[] args) {
 		
-		MeanUCERF3.checkDownload(new File(getStoreDir(), "mean_ucerf3_sol.zip"))
+		MeanUCERF3.checkDownload(new File(UCERF3_Downloader.getStoreDir(), "mean_ucerf3_sol.zip"))
 			.thenAccept(solFile -> {
 			FaultSystemSolution sol;
 			try {

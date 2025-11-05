@@ -79,7 +79,7 @@ public class UpdateAllERF {
         boolean showProgress = false;
 
         List<CompletableFuture<Boolean>> futures = new ArrayList<>();
-        futures.add(updateERF("ucerf3_erf", new UCERF3_Downloader(showProgress)));
+        futures.add(updateERF("ucerf3", new UCERF3_Downloader(showProgress)));
         futures.add(updateERF("nshm23", new NSHM23_Downloader(showProgress)));
 
         // Wait for all updates to complete
