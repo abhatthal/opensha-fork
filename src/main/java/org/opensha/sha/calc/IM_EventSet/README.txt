@@ -7,7 +7,7 @@ This application is run by typing the following on the command line:
 where <name of the inputfile> is the input file and <output-files directory> is a directory where the output files go. The location of the output directory is relative to the location of the jar file.
 
 If the --HAZ01 flag is specified, the output files will follow the HAZ01 as specified in "Data Interchange Formats for the Global Earthquake Model (GEM)", 4 May 2009.
-Note that this format has since been adapted to support SA periods with precision of up to 0.001 seconds.
+Note that this format has since been adapted to support SA periods with precision of up to 0.1 seconds.
 
 To turn on debug messages, supply the --d flag for some information messages, --dd for more finely tuned messages, and --ddd for highly detailed tracing information. 
 
@@ -16,7 +16,7 @@ java -jar -Xmx500M IMEventSetCalculatorCLT.jar \
                         --erf MeanUCERF2 \
                         --background-seismicity Exclude \
                         --rupture-offset 5 \
-                        --imts "PGA,SA200,SA 1.0" \
+                        --imts "PGA,SA02,SA 1.0" \
                         --atten-rels-file ExampleAttenRelsInputFileCLT.txt \
                         --sites ExampleSitesInputFileCLT.csv \
                         --output-dir ExampleOutputDir
