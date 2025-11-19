@@ -16,7 +16,7 @@ java -jar -Xmx500M IMEventSetCalculatorCLT.jar \
                         --erf MeanUCERF2 \
                         --background-seismicity Exclude \
                         --rupture-offset 5 \
-                        --imts "PGA,SA200,SA 1.0" \
+                        --imts "PGA,SA02,SA 1.0" \
                         --atten-rels-file ExampleAttenRelsInputFileCLT.txt \
                         --sites ExampleSitesInputFileCLT.csv \
                         --output-dir ExampleOutputDir
