@@ -20,9 +20,11 @@ import org.opensha.commons.exceptions.ParameterException;
 import org.opensha.commons.geo.Location;
 import org.opensha.commons.geo.LocationList;
 import org.opensha.commons.param.Parameter;
+import org.opensha.commons.param.ParameterList;
 import org.opensha.commons.param.WarningParameter;
 import org.opensha.commons.param.event.ParameterChangeWarningEvent;
 import org.opensha.commons.param.event.ParameterChangeWarningListener;
+import org.opensha.commons.param.impl.DoubleParameter;
 import org.opensha.commons.param.impl.StringParameter;
 import org.opensha.commons.util.ExceptionUtils;
 import org.opensha.commons.util.FileUtils;
@@ -46,10 +48,13 @@ import org.opensha.sha.earthquake.rupForecastImpl.WGCEP_UCERF_2_Final.MeanUCERF2
 import org.opensha.sha.imr.AttenRelRef;
 import org.opensha.sha.imr.AttenuationRelationship;
 import org.opensha.sha.imr.ScalarIMR;
+import org.opensha.sha.imr.attenRelImpl.ShakeMap_2003_AttenRel;
 import org.opensha.sha.imr.attenRelImpl.USGS_Combined_2004_AttenRel;
 
 import com.google.common.base.Preconditions;
 
+import org.opensha.sha.imr.param.SiteParams.Vs30_Param;
+import org.opensha.sha.imr.param.SiteParams.Vs30_TypeParam;
 import scratch.UCERF3.erf.mean.MeanUCERF3;
 import scratch.UCERF3.erf.mean.MeanUCERF3.Presets;
 
@@ -84,7 +89,7 @@ implements ParameterChangeWarningListener {
 	private File outputDir;
 	
 
-	private ArrayList<ArrayList<SiteDataValue<?>>> userDataVals;
+	private ArrayList<ParameterList> userDataVals;
 
     // All supported ERFs - call .instance() to get the BaseERF
     private static final Set<ERF_Ref> erfRefs = IMEventSetERFUtils.getSupportedERFs();
@@ -344,7 +349,7 @@ implements ParameterChangeWarningListener {
         if (locList == null)
             locList = new LocationList();
         if (userDataVals == null)
-            userDataVals = new ArrayList<ArrayList<SiteDataValue<?>>>();
+            userDataVals = new ArrayList<ParameterList>();
 
         // Split by the specified delimiter
         String[] tokens = line.trim().split(delim);
@@ -358,21 +363,23 @@ implements ParameterChangeWarningListener {
         double lon = Double.parseDouble(tokens[1].trim());
         Location loc = new Location(lat,lon);
         locList.add(loc);
-        ArrayList<SiteDataValue<?>> dataVals = new ArrayList<SiteDataValue<?>>();
+        ParameterList dataVals = new ParameterList();
         String dataVal = null;
         if (tokenCount == 3) {
             dataVal = tokens[2].trim();
         }
         if (WillsMap2000.wills_vs30_map.containsKey(dataVal)) {
             // this is a Wills Class
-            dataVals.add(new SiteDataValue<String>(SiteData.TYPE_WILLS_CLASS,
-                    SiteData.TYPE_FLAG_MEASURED, dataVal));
+            dataVals.addParameter(new StringParameter(ShakeMap_2003_AttenRel.WILLS_SITE_NAME, dataVal));
         } else if (dataVal != null) {
             // Vs30 value
             try {
-                double vs30 = Double.parseDouble(dataVal);
-                dataVals.add(new SiteDataValue<Double>(SiteData.TYPE_VS30,
-                        SiteData.TYPE_FLAG_MEASURED, vs30));
+                Vs30_Param vs30 = new Vs30_Param();
+                vs30.setValue(Double.parseDouble(dataVal));
+                dataVals.addParameter(vs30);
+                Vs30_TypeParam vs30Type = new Vs30_TypeParam();
+                vs30Type.setValue(Vs30_TypeParam.VS30_TYPE_MEASURED);
+                        dataVals.addParameter(vs30Type);
             } catch (NumberFormatException e) {
                 System.err.println("*** WARNING: Site Wills/Vs30 value unknown: " + dataVal);
             }
@@ -1114,7 +1121,7 @@ implements ParameterChangeWarningListener {
 		return locList.get(i);
 	}
 
-	public ArrayList<SiteDataValue<?>> getUserSiteDataValues(int i) {
+	public ParameterList getUserSiteData(int i) {
 		return userDataVals.get(i);
 	}
 }
