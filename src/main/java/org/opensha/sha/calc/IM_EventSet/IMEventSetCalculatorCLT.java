@@ -10,9 +10,7 @@ import java.util.regex.*;
 import java.util.logging.Level;
 
 import org.apache.commons.cli.*;
-import org.opensha.commons.data.siteData.OrderedSiteDataProviderList;
 import org.opensha.commons.data.siteData.SiteData;
-import org.opensha.commons.data.siteData.SiteDataValue;
 import org.opensha.commons.data.siteData.impl.WillsMap2000;
 import org.opensha.commons.data.siteData.impl.WillsMap2006;
 import org.opensha.commons.exceptions.ConstraintException;
@@ -24,7 +22,6 @@ import org.opensha.commons.param.ParameterList;
 import org.opensha.commons.param.WarningParameter;
 import org.opensha.commons.param.event.ParameterChangeWarningEvent;
 import org.opensha.commons.param.event.ParameterChangeWarningListener;
-import org.opensha.commons.param.impl.DoubleParameter;
 import org.opensha.commons.param.impl.StringParameter;
 import org.opensha.commons.util.ExceptionUtils;
 import org.opensha.commons.util.FileUtils;
@@ -87,7 +84,6 @@ implements ParameterChangeWarningListener {
 
 	protected String dirName = "MeanSigma"; // default output dir name
 	private File outputDir;
-	
 
 	private ArrayList<ParameterList> userDataVals;
 
@@ -104,7 +100,6 @@ implements ParameterChangeWarningListener {
 	 */
 	private static final ArrayList<String> attenRelClasses = new ArrayList<>();
 	private static final ArrayList<String> imNames = new ArrayList<>();
-    private static final OrderedSiteDataProviderList providers;
 
 	static {
         // Initialize ERF name map
@@ -169,18 +164,6 @@ implements ParameterChangeWarningListener {
 				// skip that IMR
 			}
 		}
-        ArrayList<SiteData<?>> p = new ArrayList<>();
-        try {
-            p.add(new WillsMap2006());
-        } catch (IOException e) {
-            throw ExceptionUtils.asRuntimeException(e);
-        }
-        providers = new OrderedSiteDataProviderList(p);
-        // disable non-Vs30 providers
-        for (int i=0; i<providers.size(); i++) {
-            if (!providers.getProvider(i).getDataType().equals(SiteData.TYPE_VS30))
-                providers.setEnabled(i, false);
-        }
 	}
 
     /**
@@ -1111,10 +1094,6 @@ implements ParameterChangeWarningListener {
 
 	public File getOutputDir() {
 		return outputDir;
-	}
-
-	public OrderedSiteDataProviderList getSiteDataProviders() {
-		return providers;
 	}
 
 	public Location getSiteLocation(int i) {
