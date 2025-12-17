@@ -12,7 +12,6 @@ public class IMEventSetERFUtils {
 
     // The following ERFs are excluded as they do not work for IM Event Set Calculations
     private static final List<ERF_Ref> EXCLUDED_ERFS = List.of(
-            ERF_Ref.WGCEP_02_WRAPPED_LIST,      // "WG02 Fortran Wrapped ERF List"
             ERF_Ref.STEP_ALASKA,                // "STEP Alaskan Pipeline ERF"
             ERF_Ref.POISSON_FAULT,              // "Poisson Fault ERF"
             ERF_Ref.POISSON_FLOATING_FAULT,     // "Floating Poisson Fault ERF"
