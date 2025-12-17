@@ -7,10 +7,17 @@ import java.util.*;
 
 /**
  * For writing large CSV data to file without building intermediate internal List<String> representations.
- * Remember to call flush() when done writing to the archive.
+ * Remember to call flush() or use try-with-resources when done writing to the archive.
+ * It's preferable to use try-with-resources as this ensures that the data is flushed
+ * and resources are properly released.
+ * <p>
+ *   try (CSVWriter csvWriter = new CSVWriter(new FileOutputStream(file), true)) {
+ *     // ... write data ...
+ * }   // Automatically calls close() -> flush() + stream closure
+ * </p>
  */
 
-public class CSVWriter implements Flushable {
+public class CSVWriter implements Flushable, AutoCloseable {
 
     protected boolean strictRowSizes;
     protected int cols = 0;
@@ -56,5 +63,14 @@ public class CSVWriter implements Flushable {
     @Override
     public void flush() throws IOException {
         writer.flush();
+    }
+
+    @Override
+    public void close() throws IOException {
+        try {
+            flush();
+        } finally {
+            writer.close();
+        }
     }
 }

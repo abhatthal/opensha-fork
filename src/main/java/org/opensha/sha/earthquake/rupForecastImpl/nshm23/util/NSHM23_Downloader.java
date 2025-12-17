@@ -6,6 +6,7 @@ import java.net.URI;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.List;
 
 import org.scec.getfile.GetFile;
 
@@ -13,7 +14,10 @@ import org.scec.getfile.GetFile;
  * GetFile wrapper for downloading NSHM 2023 ERFs.
  */
 public class NSHM23_Downloader extends GetFile {
-	private static final String DOWNLOAD_URL = "https://g-c662a6.a78b8.36fe.data.globus.org/getfile/nshm23/nshm23.json";
+	private static final List<URI> ENDPOINTS = List.of(
+            URI.create("https://g-3a9041.a78b8.36fe.data.globus.org/getfile/nshm23/nshm23.json"),  // CARC project2
+            URI.create("https://g-c662a6.a78b8.36fe.data.globus.org/getfile/nshm23/nshm23.json")   // CARC project
+    );
 	
 	/**
 	 * Create a GetFile instance for downloading NSHM23 models.
@@ -25,7 +29,7 @@ public class NSHM23_Downloader extends GetFile {
 				/*name=*/"NSHM 2023",
 				/*clientMetaFile=*/new File(
 						storeDir, "nshm23_client.json"),
-				/*serverMetaURI=*/URI.create(DOWNLOAD_URL),
+				/*serverMetaURIs=*/ENDPOINTS,
 				/*showProgress=*/showProgress);
 	}
 	
@@ -56,7 +60,7 @@ public class NSHM23_Downloader extends GetFile {
 	 * Get the default store directory for NSHM23 file downloads
 	 * @return	Default store directory to use in default constructor.
 	 */
-	private static File getStoreDir() {
+	public static File getStoreDir() {
 		Path storeDir = Paths.get(
 				System.getProperty("user.home"), ".opensha", "nshm23");
 		try {
