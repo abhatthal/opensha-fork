@@ -1,6 +1,5 @@
-package scratch.UCERF3.utils;
+package org.opensha.sha.earthquake.rupForecastImpl.prvi25.util;
 
-import org.scec.getfile.GetFile;
 
 import java.io.File;
 import java.io.IOException;
@@ -10,26 +9,28 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
 
+import org.scec.getfile.GetFile;
+
 /**
- * GetFile wrapper for downloading UCERF3 ERFs.
+ * GetFile wrapper for downloading NSHM 2025 ERFs.
  */
-public class UCERF3_Downloader extends GetFile {
+public class NSHM25_Downloader extends GetFile {
     private static final List<URI> ENDPOINTS = List.of(
-            URI.create("https://g-3a9041.a78b8.36fe.data.globus.org/getfile/ucerf3/ucerf3.json"),  // CARC project2
-            URI.create("https://data.opensha.org/getfile/ucerf3/ucerf3.json"),  // OpenSHA Server Alias
-            URI.create("https://opensha.scec.org/getfile/ucerf3/ucerf3.json")   // OpenSHA Server Hardcode
+            URI.create("https://g-3a9041.a78b8.36fe.data.globus.org/getfile/nshm25/nshm25.json"),  // CARC project2
+            URI.create("https://data.opensha.org/getfile/nshm25/nshm25.json"),  // OpenSHA Server Alias
+            URI.create("https://opensha.scec.org/getfile/nshm25/nshm25.json")   // OpenSHA Server Hardcode
     );
 
     /**
-     * Create a GetFile instance for downloading UCERF3 models.
+     * Create a GetFile instance for downloading NSHM25 models.
      * @param storeDir		Location to download models
      * @param showProgress
      */
-    public UCERF3_Downloader(File storeDir, boolean showProgress) {
+    public NSHM25_Downloader(File storeDir, boolean showProgress) {
         super(
-                /*name=*/"UCERF3",
+                /*name=*/"NSHM 2025",
                 /*clientMetaFile=*/new File(
-                        storeDir, "ucerf3_client.json"),
+                        storeDir, "nshm25_client.json"),
                 /*serverMetaURIs=*/ENDPOINTS,
                 /*showProgress=*/showProgress);
     }
@@ -37,7 +38,7 @@ public class UCERF3_Downloader extends GetFile {
     /**
      * Use default storeDirectory and specify to show progress.
      */
-    public UCERF3_Downloader(boolean showProgress) {
+    public NSHM25_Downloader(boolean showProgress) {
         this(getStoreDir(), showProgress);
     }
 
@@ -45,7 +46,7 @@ public class UCERF3_Downloader extends GetFile {
      * Use specified storeDirectory and show progress.
      * @param storeDir
      */
-    public UCERF3_Downloader(File storeDir) {
+    public NSHM25_Downloader(File storeDir) {
         this(storeDir, /*showProgress=*/true);
     }
 
@@ -53,24 +54,25 @@ public class UCERF3_Downloader extends GetFile {
      * Noarg default storeDirectory and shows progress constructor.
      * (Recommended Constructor)
      */
-    public UCERF3_Downloader() {
+    public NSHM25_Downloader() {
         this(/*showProgress=*/true);
     }
 
     /**
-     * Get the default store directory for UCERF3 file downloads
+     * Get the default store directory for NSHM25 file downloads
      * @return	Default store directory to use in default constructor.
      */
     public static File getStoreDir() {
         Path storeDir = Paths.get(
-                System.getProperty("user.home"), ".opensha", "ucerf3");
+                System.getProperty("user.home"), ".opensha", "nshm25");
         try {
             Files.createDirectories(storeDir);
         } catch (IOException e) {
             System.err.println(
-                    "UCERF3_Downloader failed to create storeDir at " + storeDir);
+                    "NSHM25_Downloader failed to create storeDir at " + storeDir);
             e.printStackTrace();
         }
         return storeDir.toFile();
     }
 }
+
