@@ -126,20 +126,19 @@ public class OriginalModWriter extends IM_EventSetOutputWriter {
                     row.add(Integer.toString(rupID));
 
                     for (Site site : sites) {
-                        if (HazardCurveCalculator.canSkipSource(calc.getSourceFilters(), source, site))
-                            continue;
-                        if (HazardCurveCalculator.canSkipRupture(calc.getSourceFilters(), rup, site))
-                            continue;
-                        attenRel.setSite(site);
-                        double mean = attenRel.getMean();
-                        if (stdDevParam != null) {
-                            stdDevParam.setValue(StdDevTypeParam.STD_DEV_TYPE_TOTAL);
-                        }
-                        double total = attenRel.getStdDev();
-                        double inter = -1;
-                        if (hasInterIntra) {
-                            stdDevParam.setValue(StdDevTypeParam.STD_DEV_TYPE_INTER);
-                            inter = attenRel.getStdDev();
+                        double mean = -1, total = -1, inter = -1;
+                        if (!HazardCurveCalculator.canSkipSource(calc.getSourceFilters(), source, site) &&
+                            !HazardCurveCalculator.canSkipRupture(calc.getSourceFilters(), rup, site)) {
+                            attenRel.setSite(site);
+                            mean = attenRel.getMean();
+                            if (stdDevParam != null) {
+                                stdDevParam.setValue(StdDevTypeParam.STD_DEV_TYPE_TOTAL);
+                            }
+                            total = attenRel.getStdDev();
+                            if (hasInterIntra) {
+                                stdDevParam.setValue(StdDevTypeParam.STD_DEV_TYPE_INTER);
+                                inter = attenRel.getStdDev();
+                            }
                         }
                         row.add(meanSigmaFormat.format(mean));
                         row.add(meanSigmaFormat.format(total));
@@ -204,12 +203,12 @@ public class OriginalModWriter extends IM_EventSetOutputWriter {
                     rowJB.add(Integer.toString(rupID));
 
                     for (Site site : sites) {
-                        if (HazardCurveCalculator.canSkipSource(calc.getSourceFilters(), source, site))
-                            continue;
-                        if (HazardCurveCalculator.canSkipRupture(calc.getSourceFilters(), rup, site))
-                            continue;
-                        double rupDist = rup.getRuptureSurface().getDistanceRup(site.getLocation());
-                        double distJB = rup.getRuptureSurface().getDistanceJB(site.getLocation());
+                        double rupDist = -1, distJB = -1;
+                        if (!HazardCurveCalculator.canSkipSource(calc.getSourceFilters(), source, site) &&
+                                !HazardCurveCalculator.canSkipRupture(calc.getSourceFilters(), rup, site)) {
+                            rupDist = rup.getRuptureSurface().getDistanceRup(site.getLocation());
+                            distJB = rup.getRuptureSurface().getDistanceJB(site.getLocation());
+                        }
                         row.add(distFormat.format(rupDist));
                         rowJB.add(distFormat.format(distJB));
                     }
