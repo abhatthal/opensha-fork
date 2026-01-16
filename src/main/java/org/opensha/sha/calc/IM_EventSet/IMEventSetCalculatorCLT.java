@@ -7,6 +7,7 @@ import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.*;
 import java.util.regex.*;
+import java.util.StringTokenizer;
 import java.util.logging.Level;
 
 import org.apache.commons.cli.*;
@@ -23,9 +24,9 @@ import org.opensha.commons.param.WarningParameter;
 import org.opensha.commons.param.event.ParameterChangeWarningEvent;
 import org.opensha.commons.param.event.ParameterChangeWarningListener;
 import org.opensha.commons.param.impl.StringParameter;
-import org.opensha.commons.util.ExceptionUtils;
 import org.opensha.commons.util.FileUtils;
 import org.opensha.commons.util.ServerPrefUtils;
+import org.opensha.sha.calc.params.filters.*;
 import org.opensha.sha.calc.IM_EventSet.outputImpl.HAZ01Writer;
 import org.opensha.sha.calc.IM_EventSet.outputImpl.OriginalModWriter;
 import org.opensha.sha.earthquake.ERF;
@@ -86,6 +87,8 @@ implements ParameterChangeWarningListener {
 	private File outputDir;
 
 	private ArrayList<ParameterList> userDataVals;
+
+    private final SourceFilterManager sourceFilters;
 
     // All supported ERFs - call .instance() to get the BaseERF
     private static final Set<ERF_Ref> erfRefs = IMEventSetERFUtils.getSupportedERFs();
@@ -172,6 +175,9 @@ implements ParameterChangeWarningListener {
      * @param outDir
      */
 	public IMEventSetCalculatorCLT(String inpFile, String outDir) {
+        // source filters have fixed-cutoff distance of 200km by default
+        sourceFilters = SourceFiltersParam.getDefault();
+
         String inputFileName = "MeanSigmaCalc_InputFile.txt"; // Default
         if (!(inpFile == null || inpFile.isEmpty())) {
             inputFileName = inpFile;
@@ -205,6 +211,9 @@ implements ParameterChangeWarningListener {
                                    ArrayList<String> imtNames,
                                    String siteFile,
                                    String outDir) {
+        // source filters have fixed-cutoff distance of 200km by default
+        sourceFilters = SourceFiltersParam.getDefault();
+
         getERF(erfName);
         toApplyBackGroud(bgSeismicity);
         setRupOffset(rupOffset);
@@ -1096,7 +1105,12 @@ implements ParameterChangeWarningListener {
 		return outputDir;
 	}
 
-	public Location getSiteLocation(int i) {
+    @Override
+    public List<SourceFilter> getSourceFilters() {
+        return sourceFilters.getEnabledFilters();
+    }
+
+    public Location getSiteLocation(int i) {
 		return locList.get(i);
 	}
 

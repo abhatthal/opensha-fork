@@ -14,6 +14,7 @@ import javax.swing.*;
 import org.opensha.commons.data.siteData.OrderedSiteDataProviderList;
 import org.opensha.commons.data.siteData.gui.beans.OrderedSiteDataGUIBean;
 import org.opensha.commons.geo.Location;
+import org.opensha.commons.gui.ControlPanel;
 import org.opensha.commons.gui.DisclaimerDialog;
 import org.opensha.commons.param.ParameterList;
 import org.opensha.commons.util.ApplicationVersion;
@@ -21,6 +22,7 @@ import org.opensha.commons.util.FileUtils;
 import org.opensha.commons.util.bugReports.BugReport;
 import org.opensha.commons.util.bugReports.BugReportDialog;
 import org.opensha.commons.util.bugReports.DefaultExceptionHandler;
+import org.opensha.sha.calc.params.filters.*;
 import org.opensha.sha.calc.IM_EventSet.AbstractIMEventSetCalc;
 import org.opensha.sha.calc.IM_EventSet.IMEventSetERFUtils;
 import org.opensha.sha.calc.IM_EventSet.IM_EventSetOutputWriter;
@@ -29,6 +31,8 @@ import org.opensha.sha.calc.IM_EventSet.outputImpl.OriginalModWriter;
 import org.opensha.sha.earthquake.ERF;
 import org.opensha.sha.gui.HazardCurveApplication;
 import org.opensha.sha.gui.beans.ERF_GuiBean;
+import org.opensha.sha.gui.controls.CalculationSettingsControlPanel;
+import org.opensha.sha.gui.controls.CalculationSettingsControlPanelAPI;
 import org.opensha.sha.gui.infoTools.IndeterminateProgressBar;
 import org.opensha.sha.imr.ScalarIMR;
 
@@ -37,7 +41,7 @@ import org.opensha.sha.imr.ScalarIMR;
  * Pass multiple IMRs, IMTs, sites, and data providers to compute
  * means and standard deviations.
  */
-public class IMEventSetCalculatorGUI extends JFrame implements ActionListener {
+public class IMEventSetCalculatorGUI extends JFrame implements ActionListener, CalculationSettingsControlPanelAPI {
 	
 	private static final long serialVersionUID = 1L;
 
@@ -55,9 +59,14 @@ public class IMEventSetCalculatorGUI extends JFrame implements ActionListener {
 	private OrderedSiteDataGUIBean dataBean = null;
 
     private JButton computeButton;
+    private JButton calcSettingsButton;
+    private ControlPanel calcSettingsControlPanel;
 	private JFileChooser outputChooser;
 	private JComboBox<?> outputWriterChooser;
-	
+
+    private SourceFilterManager sourceFilters;
+    private final ParameterList adjustableParams = new ParameterList();
+
 	private final IndeterminateProgressBar bar = new IndeterminateProgressBar("Calculating...");
 	private Timer doneTimer = null; // show when calculation is done
 
@@ -68,6 +77,11 @@ public class IMEventSetCalculatorGUI extends JFrame implements ActionListener {
             erfGuiBean = IMEventSetERFUtils.createERF_GUI_Bean();
             imtChooser = new IMT_ChooserPanel();
 
+            // Initialize params for control panel.
+            sourceFilters = SourceFiltersParam.getDefault();
+            SourceFiltersParam sourceFilterParam = new SourceFiltersParam(sourceFilters);
+            adjustableParams.addParameter(sourceFilterParam);
+
             // dataBean needs to be passed to SitesPanel to set sites with selected site data providers
             OrderedSiteDataProviderList providers = OrderedSiteDataProviderList.createSiteDataProviderDefaults();
             dataBean = new OrderedSiteDataGUIBean(providers);
@@ -76,6 +90,7 @@ public class IMEventSetCalculatorGUI extends JFrame implements ActionListener {
 
             imrChooser = new IMR_ChooserPanel(imtChooser, sitesPanel);
 
+            calcSettingsControlPanel = new CalculationSettingsControlPanel(this, this);
 
             // ======== app tabs ========
             JPanel imPanel = new JPanel();
@@ -113,14 +128,21 @@ public class IMEventSetCalculatorGUI extends JFrame implements ActionListener {
             String[] writers = new String[2];
             writers[0] = OriginalModWriter.NAME;
             writers[1] = HAZ01Writer.NAME;
-            outputWriterChooser = new JComboBox(writers);
+            outputWriterChooser = new JComboBox<>(writers);
+
+            calcSettingsButton = new JButton(CalculationSettingsControlPanel.NAME);
+            calcSettingsButton.addActionListener(this);
+            JPanel calcSettingsButtonWrapper = new JPanel(new BorderLayout());
+            calcSettingsButtonWrapper.setOpaque(false);
+            calcSettingsButtonWrapper.setBorder(BorderFactory.createEmptyBorder(-4, 0, 2, 0));
+            calcSettingsButtonWrapper.add(calcSettingsButton, BorderLayout.CENTER);
 
             computeButton = new JButton("Compute");
             computeButton.addActionListener(this);
-            JPanel buttonWrapper = new JPanel(new BorderLayout());
-            buttonWrapper.setOpaque(false);
-            buttonWrapper.setBorder(BorderFactory.createEmptyBorder(-4, 0, 2, 0));
-            buttonWrapper.add(computeButton, BorderLayout.CENTER);
+            JPanel computeButtonWrapper = new JPanel(new BorderLayout());
+            computeButtonWrapper.setOpaque(false);
+            computeButtonWrapper.setBorder(BorderFactory.createEmptyBorder(-4, 0, 2, 0));
+            computeButtonWrapper.add(computeButton, BorderLayout.CENTER);
 
             // Create a panel to hold the combo box and button together
             JPanel controlsPanel = new JPanel();
@@ -128,7 +150,8 @@ public class IMEventSetCalculatorGUI extends JFrame implements ActionListener {
             controlsPanel.setOpaque(false);
             controlsPanel.add(outputWriterChooser);
             controlsPanel.add(Box.createHorizontalStrut(18));
-            controlsPanel.add(buttonWrapper);
+            controlsPanel.add(calcSettingsButtonWrapper);
+            controlsPanel.add(computeButtonWrapper);
 
             // Set the progress bar to match the width of the controls above
             Dimension controlsPanelSize = controlsPanel.getPreferredSize();
@@ -280,8 +303,8 @@ public class IMEventSetCalculatorGUI extends JFrame implements ActionListener {
 
                         if (returnVal == JFileChooser.APPROVE_OPTION) {
                             File outputDir = outputChooser.getSelectedFile();
-                            IMEventSetCalcGUIImpl calc = new IMEventSetCalcGUIImpl(locs, dataLists,
-                                    outputDir, dataBean.getProviderList());
+                            IMEventSetCalcGUIImpl calc = new IMEventSetCalcGUIImpl(
+                                    locs, dataLists, outputDir, sourceFilters);
                             IM_EventSetOutputWriter writer;
                             String writerName = (String) outputWriterChooser.getSelectedItem();
                             if (writerName == null) {
@@ -354,8 +377,10 @@ public class IMEventSetCalculatorGUI extends JFrame implements ActionListener {
                 }
             };
             precalcWorker.execute();
+        } else if (e.getSource().equals(calcSettingsButton)) {
+            calcSettingsControlPanel.showControlPanel();
         }
-	}
+    }
 
     // Main method
 	public static void main(String[] args) {
@@ -408,4 +433,16 @@ public class IMEventSetCalculatorGUI extends JFrame implements ActionListener {
         return version;
     }
 
+    @Override
+    public ParameterList getCalcAdjustableParams() {
+        return adjustableParams;
+    }
+
+    @Override
+    public String getCalcParamMetadataString() {
+        ParameterList params = getCalcAdjustableParams();
+        if (params == null)
+            return "";
+        return params.getParameterListMetadataString();
+    }
 }
