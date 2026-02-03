@@ -119,6 +119,7 @@ public class OriginalModWriter extends IM_EventSetOutputWriter {
             for (int sourceID = 0; sourceID < numSources; sourceID++) {
                 ProbEqkSource source = erf.getSource(sourceID);
                 for (int rupID = 0; rupID < source.getNumRuptures(); rupID++) {
+                    boolean shouldWriteRup = false; // Don't write if all NaN vals for all sitesProbEqkRupture rup = source.getRupture(rupID);
                     ProbEqkRupture rup = source.getRupture(rupID);
                     attenRel.setEqkRupture(rup);
                     List<String> row = new ArrayList<>();
@@ -126,7 +127,7 @@ public class OriginalModWriter extends IM_EventSetOutputWriter {
                     row.add(Integer.toString(rupID));
 
                     for (Site site : sites) {
-                        double mean = -1, total = -1, inter = -1;
+                        double mean = Double.NaN, total = Double.NaN, inter = Double.NaN;
                         if (!SourceUtil.canSkipSource(calc.getSourceFilters(), source, site) &&
                             !SourceUtil.canSkipRupture(calc.getSourceFilters(), rup, site)) {
                             attenRel.setSite(site);
@@ -143,8 +144,13 @@ public class OriginalModWriter extends IM_EventSetOutputWriter {
                         row.add(meanSigmaFormat.format(mean));
                         row.add(meanSigmaFormat.format(total));
                         row.add(meanSigmaFormat.format(inter));
+
+                        // Track if the line contains at least one site with valid values
+                        boolean hasNumber = Arrays.stream(new double[]{mean, total, inter})
+                                .anyMatch((i) -> !Double.isNaN(i));
+                        if (hasNumber) shouldWriteRup = true;
                     }
-                    csvWriter.write(row);
+                    if (shouldWriteRup) csvWriter.write(row);
                 }
             }
         }
@@ -194,6 +200,8 @@ public class OriginalModWriter extends IM_EventSetOutputWriter {
             for (int sourceID = 0; sourceID < numSources; sourceID++) {
                 ProbEqkSource source = erf.getSource(sourceID);
                 for (int rupID = 0; rupID < source.getNumRuptures(); rupID++) {
+                    boolean shouldWriteRup = false;
+                    boolean shouldWriteRupJB = false;
                     ProbEqkRupture rup = source.getRupture(rupID);
                     List<String> row = new ArrayList<>();
                     List<String> rowJB = new ArrayList<>();
@@ -203,17 +211,21 @@ public class OriginalModWriter extends IM_EventSetOutputWriter {
                     rowJB.add(Integer.toString(rupID));
 
                     for (Site site : sites) {
-                        double rupDist = -1, distJB = -1;
+                        double rupDist = Double.NaN, distJB = Double.NaN;
                         if (!SourceUtil.canSkipSource(calc.getSourceFilters(), source, site) &&
                             !SourceUtil.canSkipRupture(calc.getSourceFilters(), rup, site)) {
                             rupDist = rup.getRuptureSurface().getDistanceRup(site.getLocation());
                             distJB = rup.getRuptureSurface().getDistanceJB(site.getLocation());
                         }
+                        // Track if the line contains at least one site with valid values
+                        if (!Double.isNaN(rupDist)) shouldWriteRup = true;
+                        if (!Double.isNaN(distJB)) shouldWriteRupJB = true;
+
                         row.add(distFormat.format(rupDist));
                         rowJB.add(distFormat.format(distJB));
                     }
-                    csvWriter.write(row);
-                    csvWriterJB.write(rowJB);
+                    if (shouldWriteRup) csvWriter.write(row);
+                    if (shouldWriteRupJB) csvWriterJB.write(rowJB);
                 }
             }
         }
