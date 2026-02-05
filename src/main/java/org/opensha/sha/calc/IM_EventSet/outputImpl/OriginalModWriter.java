@@ -87,14 +87,14 @@ public class OriginalModWriter extends IM_EventSetOutputWriter {
         }
 
 		Parameter<?> im = attenRel.getIntensityMeasure();
-		StringBuilder fname = new StringBuilder(attenRel.getShortName());
+		String fname = attenRel.getShortName();
 		StringTokenizer imtTok = new StringTokenizer(imt);
 		if (imtTok.countTokens() > 1) {
 			while (imtTok.hasMoreTokens())
-				fname.append("_").append(imtTok.nextToken());
-			fname.append(".csv");
+				fname += "_" + imtTok.nextToken();
+			fname += ".csv";
 		} else {
-			fname.append("_").append(imt).append(".csv");
+			fname += "_" + imt + ".csv";
 		}
 		
         File file = new File(outputDir.getAbsolutePath() + File.separator + fname);
@@ -111,8 +111,6 @@ public class OriginalModWriter extends IM_EventSetOutputWriter {
                 header.add("Inter-Event-Std-Dev.(" + siteIndex + ")");
             }
             csvWriter.write(header);
-
-            erf.updateForecast();
 
             int numSources = erf.getNumSources();
 
