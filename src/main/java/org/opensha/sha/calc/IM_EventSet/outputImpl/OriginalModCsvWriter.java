@@ -26,12 +26,12 @@ import org.opensha.sha.util.SourceUtil;
 /**
  * Writes the original CSV format files for the IM Event Set Calculator.
  */
-public class OriginalModWriter extends IM_EventSetOutputWriter {
-	public static final String NAME = "OpenSHA Format Writer";
+public class OriginalModCsvWriter extends IM_EventSetOutputWriter {
+	public static final String NAME = "OpenSHA CSV Format Writer";
 	
 	File outputDir;
 
-	public OriginalModWriter(IMEventSetCalcAPI calc) {
+	public OriginalModCsvWriter(IMEventSetCalcAPI calc) {
 		super(calc);
 	}
 
@@ -39,7 +39,7 @@ public class OriginalModWriter extends IM_EventSetOutputWriter {
 	public void writeFiles(ArrayList<ERF> erfs,
 			ArrayList<ScalarIMR> attenRels, ArrayList<String> imts)
 			throws IOException {
-		logger.log(Level.INFO, "Writing CSV format files");
+		logger.log(Level.INFO, "Writing OpenSHA CSV format files");
 		outputDir = null;
 		boolean multipleERFs = erfs.size() != 1;
         for (int erfID=0; erfID<erfs.size(); erfID++) {
@@ -87,14 +87,14 @@ public class OriginalModWriter extends IM_EventSetOutputWriter {
         }
 
 		Parameter<?> im = attenRel.getIntensityMeasure();
-		StringBuilder fname = new StringBuilder(attenRel.getShortName());
+		String fname = attenRel.getShortName();
 		StringTokenizer imtTok = new StringTokenizer(imt);
 		if (imtTok.countTokens() > 1) {
 			while (imtTok.hasMoreTokens())
-				fname.append("_").append(imtTok.nextToken());
-			fname.append(".csv");
+				fname += "_" + imtTok.nextToken();
+			fname += ".csv";
 		} else {
-			fname.append("_").append(imt).append(".csv");
+			fname += "_" + imt + ".csv";
 		}
 		
         File file = new File(outputDir.getAbsolutePath() + File.separator + fname);
@@ -111,8 +111,6 @@ public class OriginalModWriter extends IM_EventSetOutputWriter {
                 header.add("Inter-Event-Std-Dev.(" + siteIndex + ")");
             }
             csvWriter.write(header);
-
-            erf.updateForecast();
 
             int numSources = erf.getNumSources();
 
