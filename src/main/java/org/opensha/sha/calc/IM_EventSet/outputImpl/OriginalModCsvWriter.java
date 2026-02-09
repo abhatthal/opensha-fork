@@ -26,12 +26,12 @@ import org.opensha.sha.util.SourceUtil;
 /**
  * Writes the original CSV format files for the IM Event Set Calculator.
  */
-public class OriginalModWriter extends IM_EventSetOutputWriter {
-	public static final String NAME = "OpenSHA Format Writer";
+public class OriginalModCsvWriter extends IM_EventSetOutputWriter {
+	public static final String NAME = "OpenSHA CSV Format Writer";
 	
 	File outputDir;
 
-	public OriginalModWriter(IMEventSetCalcAPI calc) {
+	public OriginalModCsvWriter(IMEventSetCalcAPI calc) {
 		super(calc);
 	}
 
@@ -39,7 +39,7 @@ public class OriginalModWriter extends IM_EventSetOutputWriter {
 	public void writeFiles(ArrayList<ERF> erfs,
 			ArrayList<ScalarIMR> attenRels, ArrayList<String> imts)
 			throws IOException {
-		logger.log(Level.INFO, "Writing CSV format files");
+		logger.log(Level.INFO, "Writing OpenSHA CSV format files");
 		outputDir = null;
 		boolean multipleERFs = erfs.size() != 1;
         for (int erfID=0; erfID<erfs.size(); erfID++) {

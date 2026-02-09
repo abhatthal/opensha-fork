@@ -6,14 +6,10 @@ import java.io.IOException;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.InvocationTargetException;
 import java.util.*;
-import java.util.regex.*;
-import java.util.StringTokenizer;
 import java.util.logging.Level;
 
 import org.apache.commons.cli.*;
-import org.opensha.commons.data.siteData.SiteData;
 import org.opensha.commons.data.siteData.impl.WillsMap2000;
-import org.opensha.commons.data.siteData.impl.WillsMap2006;
 import org.opensha.commons.exceptions.ConstraintException;
 import org.opensha.commons.exceptions.ParameterException;
 import org.opensha.commons.geo.Location;
@@ -26,9 +22,9 @@ import org.opensha.commons.param.event.ParameterChangeWarningListener;
 import org.opensha.commons.param.impl.StringParameter;
 import org.opensha.commons.util.FileUtils;
 import org.opensha.commons.util.ServerPrefUtils;
+import org.opensha.sha.calc.IM_EventSet.outputImpl.OriginalModCsvWriter;
 import org.opensha.sha.calc.params.filters.*;
 import org.opensha.sha.calc.IM_EventSet.outputImpl.HAZ01Writer;
-import org.opensha.sha.calc.IM_EventSet.outputImpl.OriginalModWriter;
 import org.opensha.sha.earthquake.ERF;
 import org.opensha.sha.earthquake.ERF_Ref;
 import org.opensha.sha.earthquake.param.AleatoryMagAreaStdDevParam;
@@ -649,7 +645,7 @@ implements ParameterChangeWarningListener {
 		if (haz01) {
 			writer = new HAZ01Writer(this);
 		} else {
-			writer = new OriginalModWriter(this);
+			writer = new OriginalModCsvWriter(this);
 		}
 		writer.writeFiles(forecast, chosenAttenuationsList, supportedIMTs);
 	}
