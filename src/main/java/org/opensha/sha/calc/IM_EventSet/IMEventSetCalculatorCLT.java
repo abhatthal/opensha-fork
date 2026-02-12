@@ -166,32 +166,7 @@ implements ParameterChangeWarningListener {
 	}
 
     /**
-     * Legacy constructor for parsing legacy input file.
-     * @param inpFile
-     * @param outDir
-     */
-	public IMEventSetCalculatorCLT(String inpFile, String outDir) {
-        // source filters have fixed-cutoff distance of 200km by default
-        sourceFilters = SourceFiltersParam.getDefault();
-
-        String inputFileName = "MeanSigmaCalc_InputFile.txt"; // Default
-        if (!(inpFile == null || inpFile.isEmpty())) {
-            inputFileName = inpFile;
-        }
-        if (!(outDir == null || outDir.isEmpty())) {
-            dirName = outDir;
-            outputDir = new File(dirName);
-        }
-        try {
-            parseLegacyInputFile(inputFileName);
-        } catch (Exception ex) {
-            logger.log(Level.INFO, "Error parsing input file!", ex);
-            System.exit(1);
-        }
-	}
-
-    /**
-     * New input constructor with improved flexibility
+     * Constructor parses inputs and sets params
      * @param erfName           String for short or long name of the ERF
      * @param bgSeismicity
      * @param rupOffset
@@ -237,7 +212,7 @@ implements ParameterChangeWarningListener {
     }
 
     /**
-     * For new input format, sites are collected directly from a CSV file
+     * Sites are collected directly from a CSV file
      * @param siteFile
      */
     private void parseSitesInputCSV(String siteFile) throws IOException {
@@ -256,72 +231,6 @@ implements ParameterChangeWarningListener {
             setSite(line, ",");
         }
     }
-
-    /**
-     * Legacy input format parses every input with one large TXT file
-     * @param inputFileName
-     * @throws IOException
-     */
-	private void parseLegacyInputFile(String inputFileName) throws IOException {
-		ArrayList<String> fileLines;
-		
-		logger.log(Level.INFO, "Parsing input file: " + inputFileName);
-
-		fileLines = FileUtils.loadFile(inputFileName);
-		
-		if (fileLines.isEmpty()) {
-			throw new RuntimeException("Input file empty or doesn't exist! " + inputFileName);
-		}
-
-		int j = 0;
-		int numIMRdone=0;
-		int numIMRs=0;
-		int numIMTdone=0;
-		int numIMTs=0;
-		int numSitesDone= 0;
-		int numSites =0;
-        for (String fileLine : fileLines) {
-            String line = fileLine.trim();
-            // if it is comment skip to next line
-            if (line.startsWith("#") || line.isEmpty()) continue;
-            if (j == 0) getERF(line);
-            if (j == 1) {
-                toApplyBackGroud(line.trim());
-            }
-            if (j == 2) {
-                double rupOffset = Double.parseDouble(line.trim());
-                setRupOffset(rupOffset);
-            }
-            if (j == 3)
-                numIMRs = Integer.parseInt(line.trim());
-            if (j == 4) {
-                setIMR(line.trim());
-                ++numIMRdone;
-                if (numIMRdone == numIMRs)
-                    ++j;
-                continue;
-            }
-            if (j == 5)
-                numIMTs = Integer.parseInt(line.trim());
-            if (j == 6) {
-                setIMT(line.trim());
-                ++numIMTdone;
-                if (numIMTdone == numIMTs)
-                    ++j;
-                continue;
-            }
-            if (j == 7)
-                numSites = Integer.parseInt(line.trim());
-            if (j == 8) {
-                setSite(line.trim());
-                ++numSitesDone;
-                if (numSitesDone == numSites)
-                    ++j;
-                continue;
-            }
-            ++j;
-        }
-	}
 
     private void setSite(String line) {
         // Default delimiter: any whitespace
@@ -342,6 +251,13 @@ implements ParameterChangeWarningListener {
         // Split by the specified delimiter
         String[] tokens = line.trim().split(delim);
         int tokenCount = tokens.length;
+
+        // TODO: Update to accept [2-5] tokens. Drop Wills Site class support.
+        // Lat, Lon
+        // Lat, Lon, Vs30
+        // Lat, Lon, Vs30, Z1.0
+        // Lat, Lon, Vs30, Z1.0, Z2.5
+        // Leverage SiteImporter
 
         if(tokenCount > 3 || tokenCount < 2) {
             throw new RuntimeException("Must Enter valid Lat Lon in each line in the file");
@@ -452,7 +368,6 @@ implements ParameterChangeWarningListener {
     /**
      * Creates an ERF instance from the string parsed as an erfName.
      * ERFs are created with default parameters, with a few hardcoded exceptions.
-     * All values set in getERF can be overriden by custom parameters in `parseLegacyInputFile`.
      * @param line user input to parse into an erfName
      */
 	private void getERF(String line){
@@ -695,7 +610,7 @@ implements ParameterChangeWarningListener {
     }
 
     /**
-     * How to use the CLT with the new interface. Use `--help` to see this.
+     * How to use the CLT. Use `--help` to see this.
      * @param options
      */
     private static void printUsage(Options options) {
@@ -712,38 +627,10 @@ implements ParameterChangeWarningListener {
                 "         -r 5 \\\n" +
                 "         -s sites.csv \\\n" +
                 "         -o results/\n\n" +
-                "Legacy-mode usage:\n" +
-                "  imcalc --legacy <legacy-input.txt> <output-dir>\n\n" +
-                "Note: Site data value (Vs30 or Wills Class) is optional in CSV file.\n" +
-                "      Use IMEventSetCalculatorGUI for more refined control of Site Parameters.\n" +
-                "      Legacy input file format is deprecated. Consider migrating to new-style options.\n";
+                "Note: Site data values are limited to Vs30, Z1.0, Z2.5 in CSV file.\n" +
+                "      Use IMEventSetCalculatorGUI for more refined control of Site Parameters.\n";
 
-        formatter.printHelp("imcalc [OPTIONS] [--] [<legacy-file> <output-dir>]",
-                header, options, footer, true);
-    }
-
-    /**
-     * How to use the CLT with the legacy interface. Use `--legacy --help` to see this.
-     * @param options
-     */
-    private static void printLegacyUsage(Options options) {
-        HelpFormatter formatter = new HelpFormatter();
-        formatter.setOptionComparator(null); // Preserve declaration order
-
-        String header = "\nIM Event Set Calculator - Legacy Mode\n\n" +
-                "Uses fixed-format input file. See example input file for format details.\n\n";
-
-        String footer = "\nLegacy-mode usage:\n" +
-                "  imcalc --legacy <legacy-input.txt> <output-dir>\n\n" +
-                "Example:\n" +
-                "  imcalc --legacy ExampleLegacyInputFileCLT.txt output/\n" +
-                "  imcalc --legacy --haz01 ExampleLegacyInputFileCLT.txt output/\n" +
-                "  imcalc --legacy -d ExampleLegacyInputFileCLT.txt output/\n\n" +
-                "Note: Legacy input file format is deprecated.\n" +
-                "      Consider migrating to new command-line options for better flexibility.\n" +
-                "      Use 'imcalc --help' (without --legacy) to see new-style options.\n";
-
-        formatter.printHelp("imcalc --legacy [OPTIONS] <legacy-input.txt> <output-dir>",
+        formatter.printHelp("imcalc ",
                 header, options, footer, true);
     }
 
@@ -756,17 +643,15 @@ implements ParameterChangeWarningListener {
     }
 
     /**
-     * Creates all options that can be interpreted by either the new input format
-     * or the legacy input format.
+     * Creates all options
      * @return
      */
-    private static Options createFullOptions() {
+    private static Options createOptions() {
         Options options = new Options();
 
-        // Common options (available in both legacy and new-style)
         options.addOption(Option.builder("h")
                 .longOpt("help")
-                .desc("Show this help and exit. Use `--legacy --help` for legacy-style help")
+                .desc("Show this help and exit.")
                 .build());
 
         options.addOption(Option.builder()
@@ -818,7 +703,7 @@ implements ParameterChangeWarningListener {
                 .desc("Rupture offset for floating ruptures (1-100 km; 5 km is generally best). Not applicable to UCERF3, but a value is still required.")
                 .build());
 
-        OptionGroup attenRelGroup = new OptionGroup(); // Mutually exclusive options
+        OptionGroup attenRelGroup = new OptionGroup();
         attenRelGroup.addOption(Option.builder("a")
                 .longOpt("atten-rels")
                 .hasArg()
@@ -854,102 +739,16 @@ implements ParameterChangeWarningListener {
                 .desc("Where to write results (defaults to current dir)")
                 .build());
 
-        options.addOption(Option.builder()
-                .longOpt("legacy")
-                .desc("Switch to legacy-file mode")
-                .build());
-
         return options;
     }
 
     /**
-     * The old input format was positional arguments for one TXT file with all
-     * inputs and an output dir. These options are optional.
-     * Dedicated function for legacyOptions is needed to generate usage.
-     * @return
+     * Process input parameters
+     * @param cmd All arguments for parsing
+     * @return CLT instance
      */
-    private static Options createLegacyOptions() {
-        Options options = new Options();
-
-        // Legacy mode only supports common options
-        options.addOption(Option.builder("h")
-                .longOpt("help")
-                .desc("Show legacy help and exit. Don't pass `--legacy` for new-style help.")
-                .build());
-
-        options.addOption(Option.builder()
-                .longOpt("haz01")
-                .desc("Use HAZ01 output file format instead of default")
-                .build());
-
-        options.addOption(Option.builder("d")
-                .desc("Set logging level to CONFIG (verbose)")
-                .build());
-
-        options.addOption(Option.builder("dd")
-                .desc("Set logging level to FINE (very verbose)")
-                .build());
-
-        options.addOption(Option.builder("ddd")
-                .desc("Set logging level to ALL (debug)")
-                .build());
-
-        options.addOption(Option.builder("q")
-                .longOpt("quiet")
-                .desc("Set logging level to OFF (quiet)")
-                .build());
-
-        return options;
-    }
-
-    /**
-     * Process legacy input parameters that are not common to new interface.
-     * @param cmd optional arguments
-     * @param remainingArgs Positional arguments
-     * @return CLT instance constructed with legacy input params to use for calculation
-     */
-    private static IMEventSetCalculatorCLT processLegacyInput(
-            CommandLine cmd,
-            String[] remainingArgs) {
-        Options options = createLegacyOptions();
-        // Handle help option
-        if (cmd.hasOption("help")) {
-            printLegacyUsage(options);
-            System.exit(0);
-        }
-
-        logger.log(Level.WARNING, "Using deprecated legacy input file format. Consider migrating to new command-line options.");
-        logger.log(Level.WARNING, "See 'imcalc --help' for new-style usage.");
-
-        // Validate that new-style options are not used in legacy mode
-        String[] invalidOptions = {"erf", "background-seismicity", "atten-rels", "atten-rels-file", "imts", "sites", "output-dir"};
-        for (String option : invalidOptions) {
-            if (cmd.hasOption(option)) {
-                System.err.println("Error: Option --" + option + " is not supported in legacy mode");
-                System.err.println("Use a legacy input file or switch to new-style mode");
-                System.exit(2);
-            }
-        }
-
-        // Get the non-option arguments (positional arguments)
-        if (remainingArgs.length != 2) {
-            System.err.println("Error: Input file and output directory are required");
-            System.err.println("Expected 2 positional arguments, found: " + remainingArgs.length);
-            System.exit(2);
-        }
-        String inputFileName = remainingArgs[0];
-        String outputDirName = remainingArgs[1];
-
-        return new IMEventSetCalculatorCLT(inputFileName, outputDirName);
-    }
-
-    /**
-     * Process new style input parameters that are not common to legacy interface.
-     * @param cmd All arguments for parsing in the new input format
-     * @return CLT instance constructed with legacy input params to use for calculation
-     */
-    private static IMEventSetCalculatorCLT processNewStyleInput(CommandLine cmd) {
-        Options options = createFullOptions();
+    private static IMEventSetCalculatorCLT processInput(CommandLine cmd) {
+        Options options = createOptions();
         // Handle help option
         if (cmd.hasOption("help")) {
             printUsage(options);
@@ -1038,14 +837,14 @@ implements ParameterChangeWarningListener {
 
 
     /**
-     * Entry point to CLT. Parses input to determine input mode (new-style vs legacy),
-     * directly processes common parameters, and calls the appropriate processor.
+     * Entry point to CLT.
+     * Processes command line input and invokes the calculator.
      * Exits with 0 on success, 1 on failure, and 2 on invalid input.
      * @param args
      */
 	public static void main(String[] args) {
         // First, parse with full options to detect mode
-        Options options = createFullOptions();
+        Options options = createOptions();
         CommandLineParser parser = new DefaultParser();
         CommandLine cmd = null;
 
@@ -1057,30 +856,13 @@ implements ParameterChangeWarningListener {
             System.exit(2);
         }
 
-        // Determine mode
-        boolean legacyMode = cmd.hasOption("legacy");
-        String[] remainingArgs = cmd.getArgs();
-
         Level level = getLogLevel(cmd);
         initLogger(level);
-
-        // If legacy mode not explicitly set but .txt file detected, use legacy mode
-        // This effectively means that the --legacy flag is optional and existing users
-        // of the legacy format won't be impacted by the new input format.
-        if (!legacyMode && remainingArgs.length > 0 && remainingArgs[0].toLowerCase().endsWith(".txt")) {
-            legacyMode = true;
-        }
 
         // Output mode
         boolean haz01 = cmd.hasOption("haz01");
 
-        // Process input according to legacy or new input mode and initialize calculator
-        IMEventSetCalculatorCLT calc = null;
-        if (legacyMode) {
-            calc = processLegacyInput(cmd, remainingArgs);
-        } else {
-           calc = processNewStyleInput(cmd);
-        }
+        IMEventSetCalculatorCLT calc = processInput(cmd);
 
         // Invoke calculator
         try {
