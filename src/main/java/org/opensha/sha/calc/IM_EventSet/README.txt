@@ -2,9 +2,42 @@ The IM Event Set Calculator CLT is a command-line application that gives the mea
 
 This application is run by typing the following on the command line:
 
-	java -jar -Xmx500M IMEventSetCalculatorCLT.jar [--HAZ01] [--d] <name of the inputfile> <output-files directory>
+	java -jar -Xmx500M IMEventSetCalculatorCLT.jar  [-h] [--list-erfs] [--haz01] [-d] [-dd] [-ddd] [-q] [-e <name>]
+                                                     [-b <type>] [-r <km>] [-a <IMR1,IMR2,...> | -f <file>]
+                                                     [-m <IMT1,IMT2,...>] [-s <csv-file>] [-o <dir>]
 
-where <name of the inputfile> is the input file and <output-files directory> is a directory where the output files go. The location of the output directory is relative to the location of the jar file.
+
+IM Event Set Calculator - Compute Mean and Sigma for Attenuation
+Relationships and IMTs
+
+ -h,--help                           Show this help and exit.
+    --list-erfs                      List available ERF short names and
+                                     long names
+    --haz01                          Use HAZ01 output file format instead
+                                     of default
+ -d                                  Set logging level to CONFIG (verbose)
+ -dd                                 Set logging level to FINE (very
+                                     verbose)
+ -ddd                                Set logging level to ALL (debug)
+ -q,--quiet                          Set logging level to OFF (quiet)
+ -e,--erf <name>                     Earthquake Rupture Forecast (ERF) -
+                                     short code or full name in quotes
+ -b,--background-seismicity <type>   Include | Exclude | Only-Background
+ -r,--rupture-offset <km>            Rupture offset for floating ruptures
+                                     (1-100 km; 5 km is generally best).
+                                     Not applicable to UCERF3, but a value
+                                     is still required.
+ -a,--atten-rels <IMR1,IMR2,...>     Comma-separated in quotation
+                                     attenuation relations
+ -f,--atten-rels-file <file>         Newlines-separated IMR list (mutually
+                                     exclusive with --atten-rels)
+ -m,--imts <IMT1,IMT2,...>           Comma-separated intensity-measure
+                                     types
+ -s,--sites <csv-file>               CSV of Lat, Lon, [Vs30/Wills] (column
+                                     optional)
+ -o,--output-dir <dir>               Where to write results (defaults to
+                                     current dir)
+
 
 If the --HAZ01 flag is specified, the output files will follow the HAZ01 as specified in "Data Interchange Formats for the Global Earthquake Model (GEM)", 4 May 2009.
 
@@ -20,20 +53,13 @@ java -jar -Xmx500M IMEventSetCalculatorCLT.jar \
                         --sites ExampleSitesInputFileCLT.csv \
                         --output-dir ExampleOutputDir
 
-Or alternatively with the legacy input format:
-java -jar -Xmx500M IMEventSetCalculatorCLT.jar ExampleLegacyInputFileCLT.txt ExampleLegacyOutputDir
 
 It will run the application IMEventSetCalculatorCLT.jar with the input file ExampleInputFileCLT.txt, which must exist in the same location as the IMEventSetCalculatorCLT.jar application, and will create the output files in the directory ExampleOutputDir.
 
 NOTE: If you see an error message mentioning Java heap space, GC Overhead, or anything with "Memory" in the message, increase the memory to java by replacing the default "-Xmx500M" argument in the above example with "-Xmx2G". This allocates 2 GB of memory. Increase further (-Xmx3G, ...) if that still fails.
 
-An example input file is included in this directory as "ExampleLegacyInputFileCLT.txt".
-This txt file has all the inputs for the legacy format in one large file.
-
-The new format uses a Sites CSV file, "ExampleSitesInputFileCLT.csv" without headers.
+The input format uses a Sites CSV file, "ExampleSitesInputFileCLT.csv" without headers.
 You can also pass an IMR input File, "ExampleAttenRelsInputFileCLT.txt" with an IMR on each line and "#" line-comments.
-Note that the legacy input file and new format input files are mutually exclusive.
-
 
 Each line of the input file that starts with "#" is a comment that gets ignored by the program (they are just for user's information).
 
