@@ -368,7 +368,6 @@ implements ParameterChangeWarningListener {
     /**
      * Creates an ERF instance from the string parsed as an erfName.
      * ERFs are created with default parameters, with a few hardcoded exceptions.
-     * All values set in getERF can be overriden by custom parameters in `parseLegacyInputFile`.
      * @param line user input to parse into an erfName
      */
 	private void getERF(String line){
@@ -631,7 +630,7 @@ implements ParameterChangeWarningListener {
                 "Note: Site data values are limited to Vs30, Z1.0, Z2.5 in CSV file.\n" +
                 "      Use IMEventSetCalculatorGUI for more refined control of Site Parameters.\n";
 
-        formatter.printHelp("imcalc [OPTIONS] [--] [<legacy-file> <output-dir>]",
+        formatter.printHelp("imcalc ",
                 header, options, footer, true);
     }
 
@@ -644,8 +643,7 @@ implements ParameterChangeWarningListener {
     }
 
     /**
-     * Creates all options that can be interpreted by either the new input format
-     * or the legacy input format.
+     * Creates all options
      * @return
      */
     private static Options createOptions() {
@@ -653,7 +651,7 @@ implements ParameterChangeWarningListener {
 
         options.addOption(Option.builder("h")
                 .longOpt("help")
-                .desc("Show this help and exit. Use `--legacy --help` for legacy-style help")
+                .desc("Show this help and exit.")
                 .build());
 
         options.addOption(Option.builder()
