@@ -35,9 +35,7 @@ public class IMEventSetERFUtils {
     }
 
     public static Set<ERF_Ref> getSupportedERFs() {
-        Set<ERF_Ref> allERFs = ERF_Ref.get(/*includeListERFs=*/false, ServerPrefUtils.SERVER_PREFS);
-        allERFs.removeAll(EXCLUDED_ERFS);
-        return allERFs;
+        return getSupportedERFs(false, ServerPrefUtils.SERVER_PREFS);
     }
 
     public static Set<ERF_Ref> getSupportedERFs(boolean includeListERFs, ServerPrefs prefs) {
