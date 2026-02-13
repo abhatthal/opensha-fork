@@ -20,7 +20,7 @@ import org.opensha.sha.earthquake.ProbEqkRupture;
 import org.opensha.sha.earthquake.ProbEqkSource;
 import org.opensha.sha.imr.ScalarIMR;
 import org.opensha.sha.imr.param.OtherParams.StdDevTypeParam;
-import org.opensha.sha.util.SourceUtil;
+import org.opensha.sha.calc.sourceFilters.SourceFilterUtils;
 
 /**
  * Writes the original TXT format files for the IM Event Set Calculator.
@@ -126,8 +126,8 @@ public class OriginalModTxtWriter extends IM_EventSetOutputWriter {
 				String line = sourceID + " " + rupID;
 				for (Site site : sites) {
                     double mean = Double.NaN, total = Double.NaN, inter = Double.NaN;
-                    if (!SourceUtil.canSkipSource(calc.getSourceFilters(), source, site) &&
-                        !SourceUtil.canSkipRupture(calc.getSourceFilters(), rup, site)) {
+                    if (!SourceFilterUtils.canSkipSource(calc.getSourceFilters(), source, site) &&
+                        !SourceFilterUtils.canSkipRupture(calc.getSourceFilters(), rup, site)) {
                         attenRel.setSite(site);
                         mean = attenRel.getMean();
                         if (stdDevParam != null) {
@@ -204,8 +204,8 @@ public class OriginalModTxtWriter extends IM_EventSetOutputWriter {
 				String lineJB = line;
 				for (Site site : sites) {
                     double rupDist = Double.NaN, distJB = Double.NaN;
-                    if (!SourceUtil.canSkipSource(calc.getSourceFilters(), source, site) &&
-                        !SourceUtil.canSkipRupture(calc.getSourceFilters(), rup, site)) {
+                    if (!SourceFilterUtils.canSkipSource(calc.getSourceFilters(), source, site) &&
+                        !SourceFilterUtils.canSkipRupture(calc.getSourceFilters(), rup, site)) {
                         rupDist = rup.getRuptureSurface().getDistanceRup(site.getLocation());
                         distJB = rup.getRuptureSurface().getDistanceJB(site.getLocation());
                     }
