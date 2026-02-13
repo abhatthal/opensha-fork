@@ -34,7 +34,7 @@ public class SiteFileWriter {
      * @param siteDataTypes ordered list of data to write for each site
      */
     public SiteFileWriter(boolean lonFirst, ArrayList<String> siteDataTypes) {
-        this(lonFirst, siteDataTypes, " ");
+        this(lonFirst, siteDataTypes, ",");
     }
 
     /**
@@ -68,7 +68,7 @@ public class SiteFileWriter {
             // Write header
             fileWriter.write(SiteFileLoader.COM + " ");
             if (lonFirst)
-                fileWriter.write("Lon " + delim + "Lat");
+                fileWriter.write("Lon" + delim + "Lat");
             else
                 fileWriter.write("Lat" + delim + "Lon");
             for (String dataType : siteDataTypes) {

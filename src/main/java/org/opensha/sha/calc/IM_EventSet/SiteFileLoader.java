@@ -47,7 +47,7 @@ public class SiteFileLoader {
      * @param siteDataTypes list of types to try loading in order after site coordinates
      */
 	public SiteFileLoader(boolean lonFirst, String measurementType, ArrayList<String> siteDataTypes) {
-        this(lonFirst, measurementType, siteDataTypes, " \t\n\r\f");
+        this(lonFirst, measurementType, siteDataTypes, ",");
 	}
 
     /**
