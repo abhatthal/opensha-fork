@@ -9,6 +9,8 @@ import java.util.*;
 import java.util.logging.Level;
 
 import org.apache.commons.cli.*;
+import org.opensha.commons.data.siteData.SiteData;
+import org.opensha.commons.data.siteData.SiteDataValue;
 import org.opensha.commons.data.siteData.impl.WillsMap2000;
 import org.opensha.commons.exceptions.ConstraintException;
 import org.opensha.commons.exceptions.ParameterException;
@@ -49,8 +51,11 @@ import org.opensha.sha.imr.attenRelImpl.USGS_Combined_2004_AttenRel;
 
 import com.google.common.base.Preconditions;
 
+import org.opensha.sha.imr.param.SiteParams.DepthTo1pt0kmPerSecParam;
+import org.opensha.sha.imr.param.SiteParams.DepthTo2pt5kmPerSecParam;
 import org.opensha.sha.imr.param.SiteParams.Vs30_Param;
 import org.opensha.sha.imr.param.SiteParams.Vs30_TypeParam;
+import org.opensha.sha.util.SiteTranslator;
 import scratch.UCERF3.erf.mean.MeanUCERF3;
 import scratch.UCERF3.erf.mean.MeanUCERF3.Presets;
 
@@ -198,7 +203,16 @@ implements ParameterChangeWarningListener {
         }
         if (siteFile == null || siteFile.isEmpty()) {
             // If no sites file provided, default to 1 site in LA with Vs30 760m/s
-            setSite("34.1 -118.1 760");
+            // "34.1 -118.1 760"
+            locList = new LocationList(List.of(new Location(34.1,-118.1)));
+            Vs30_Param vs30Param = new Vs30_Param();
+            vs30Param.setValue(760);
+            Vs30_TypeParam type = new Vs30_TypeParam();
+            type.setValue(SiteData.TYPE_FLAG_MEASURED);
+            ParameterList params = new ParameterList();
+            params.addParameter(vs30Param);
+            params.addParameter(type);
+            userDataVals = new ArrayList<>(List.of(params));
         } else {
             try {
                 parseSitesInputCSV(siteFile);
@@ -219,78 +233,30 @@ implements ParameterChangeWarningListener {
      */
     private void parseSitesInputCSV(String siteFile) throws IOException {
         ArrayList<String> fileLines;
-
-        logger.log(Level.INFO, "Parsing sites input file: " + siteFile);
-
-        fileLines = FileUtils.loadFile(siteFile);
-        if (fileLines.isEmpty()) {
-            throw new RuntimeException("Input file empty or doesn't exist! " + siteFile);
+        SiteFileLoader loader = new SiteFileLoader(/*lonFirst=*/false,
+                SiteData.TYPE_FLAG_MEASURED,
+                new ArrayList<>(List.of(SiteFileLoader.allSiteDataTypes)));
+        try {
+            loader.loadFile(new File(siteFile));
+        } catch (java.text.ParseException e) {
+            logger.log(Level.SEVERE, "Failed to parse the sites input file.");
+            throw new RuntimeException(e);
         }
-        for (String fileLine : fileLines) {
-            String line = fileLine.trim();
-            // if it is comment skip to next line
-            if (line.startsWith("#") || line.isEmpty()) continue;
-            setSite(line, ",");
+        locList = new LocationList(loader.getLocs());
+
+        ParameterList defaultParams = new ParameterList();
+        defaultParams.addParameter(new Vs30_Param());
+        defaultParams.addParameter(new Vs30_TypeParam());
+        defaultParams.addParameter(new DepthTo1pt0kmPerSecParam());
+        defaultParams.addParameter(new DepthTo2pt5kmPerSecParam());
+
+        userDataVals = new ArrayList<>();
+        SiteTranslator siteTrans = new SiteTranslator();
+        for (ArrayList<SiteDataValue<?>> siteVals : loader.getValsList()) {
+            ParameterList params = (ParameterList) defaultParams.clone();
+            params.forEach(param -> siteTrans.setParameterValue(param, siteVals));
+            userDataVals.add(params);
         }
-    }
-
-    private void setSite(String line) {
-        // Default delimiter: any whitespace
-        setSite(line, "\\s+");
-    }
-
-	/**
-	 * Gets the list of locations with their Wills Site Class or Vs30 values
-	 * @param line String
-     * @param delim Delimiter
-	 */
-    private void setSite(String line, String delim) {
-        if (locList == null)
-            locList = new LocationList();
-        if (userDataVals == null)
-            userDataVals = new ArrayList<ParameterList>();
-
-        // Split by the specified delimiter
-        String[] tokens = line.trim().split(delim);
-        int tokenCount = tokens.length;
-
-        // TODO: Update to accept [2-5] tokens. Drop Wills Site class support.
-        // Lat, Lon
-        // Lat, Lon, Vs30
-        // Lat, Lon, Vs30, Z1.0
-        // Lat, Lon, Vs30, Z1.0, Z2.5
-        // Leverage SiteImporter
-
-        if(tokenCount > 3 || tokenCount < 2) {
-            throw new RuntimeException("Must Enter valid Lat Lon in each line in the file");
-        }
-
-        double lat = Double.parseDouble(tokens[0].trim());
-        double lon = Double.parseDouble(tokens[1].trim());
-        Location loc = new Location(lat,lon);
-        locList.add(loc);
-        ParameterList dataVals = new ParameterList();
-        String dataVal = null;
-        if (tokenCount == 3) {
-            dataVal = tokens[2].trim();
-        }
-        if (WillsMap2000.wills_vs30_map.containsKey(dataVal)) {
-            // this is a Wills Class
-            dataVals.addParameter(new StringParameter(ShakeMap_2003_AttenRel.WILLS_SITE_NAME, dataVal));
-        } else if (dataVal != null) {
-            // Vs30 value
-            try {
-                Vs30_Param vs30 = new Vs30_Param();
-                vs30.setValue(Double.parseDouble(dataVal));
-                dataVals.addParameter(vs30);
-                Vs30_TypeParam vs30Type = new Vs30_TypeParam();
-                vs30Type.setValue(Vs30_TypeParam.VS30_TYPE_MEASURED);
-                        dataVals.addParameter(vs30Type);
-            } catch (NumberFormatException e) {
-                System.err.println("*** WARNING: Site Wills/Vs30 value unknown: " + dataVal);
-            }
-        }
-        userDataVals.add(dataVals);
     }
 
 	/**
