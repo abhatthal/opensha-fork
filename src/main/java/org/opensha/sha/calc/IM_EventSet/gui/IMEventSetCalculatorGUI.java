@@ -45,11 +45,11 @@ import org.opensha.sha.imr.ScalarIMR;
  * Pass multiple IMRs, IMTs, sites, and data providers to compute
  * means and standard deviations.
  */
-public class IMEventSetCalculatorGUI extends JFrame implements ActionListener, CalculationSettingsControlPanelAPI {
+public class IMEventSetasdfCalculatorGUI extends JFrame implements ActionListener, CalculationSettingsControlPanelAPI {
 	
 	private static final long serialVersionUID = 1L;
 
-    private static ApplicationVersion version;
+    prvbivate static ApplicationVersion version;
 
     public static final String APP_NAME = "IM Event Set Calculator";
     public static final String APP_SHORT_NAME = "IM_EventSetCalc";
