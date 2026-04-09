@@ -97,16 +97,16 @@ public class CONUS_Downloader {
      * Extracts the downloaded zip archive
      * Extracted archive name is same as `getSiteDataEntry`
      * @return path to extracted archive
-     * @throws IOException
      */
-    private File extractArchive() throws IOException {
+    private File extractArchive() {
         // Check if file exists or throw error
         File archive = new File(outputDir.getAbsolutePath(), getArchiveName());
+        String errTitle = "Extraction Failed";
         if (!outputDir.exists() || !archive.exists()) {
             String errMsg = "Failed to extract archive " + archive + ". Does not exist.";
             log.error(errMsg);
             if (!GraphicsEnvironment.isHeadless()) {
-                JOptionPane.showMessageDialog(null, errMsg, "Extraction Failed", JOptionPane.ERROR_MESSAGE);
+                JOptionPane.showMessageDialog(null, errMsg, errTitle, JOptionPane.ERROR_MESSAGE);
             }
             return null;
         }
@@ -151,12 +151,24 @@ public class CONUS_Downloader {
                 }
                 // Skip all other entries (like the top-level directory and anything outside site-data)
             }
+        } catch (java.util.zip.ZipException e) {
+            String errMsg = "Invalid or corrupted zip file: " + archive.getName() + " - " + e.getMessage();
+            log.error(errMsg, e);
+            if (!GraphicsEnvironment.isHeadless()) {
+                JOptionPane.showMessageDialog(null, errMsg, errTitle, JOptionPane.ERROR_MESSAGE);
+            }
+        } catch (IOException e) {
+            String errMsg = "Failed to read zip file: " + archive.getName() + " - " + e.getMessage();
+            log.error(errMsg, e);
+            if (!GraphicsEnvironment.isHeadless()) {
+                JOptionPane.showMessageDialog(null, errMsg, errTitle, JOptionPane.ERROR_MESSAGE);
+            }
         }
 
         // Delete the archive after extraction
         archive.delete();
 
-        return target;
+        return (target.exists()) ? target : null;
     }
 
     /**
