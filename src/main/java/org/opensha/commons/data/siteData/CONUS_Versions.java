@@ -1,6 +1,6 @@
 package org.opensha.commons.data.siteData;
 
-public enum CONUS_Versions {
+public enum CONUS_Versions implements VersionResolver {
     NSHM23("NSHM (2023)", "6.1.3"),
     NSHM18("NSHM (2018)", "5.2.4");
 
