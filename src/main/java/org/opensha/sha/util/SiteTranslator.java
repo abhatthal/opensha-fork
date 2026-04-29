@@ -29,10 +29,7 @@ import org.opensha.sha.imr.attenRelImpl.SadighEtAl_1997_AttenRel;
 import org.opensha.sha.imr.attenRelImpl.ShakeMap_2003_AttenRel;
 import org.opensha.sha.imr.attenRelImpl.USGS_Combined_2004_AttenRel;
 import org.opensha.sha.imr.attenRelImpl.ZhaoEtAl_2006_AttenRel;
-import org.opensha.sha.imr.param.SiteParams.DepthTo1pt0kmPerSecParam;
-import org.opensha.sha.imr.param.SiteParams.DepthTo2pt5kmPerSecParam;
-import org.opensha.sha.imr.param.SiteParams.Vs30_Param;
-import org.opensha.sha.imr.param.SiteParams.Vs30_TypeParam;
+import org.opensha.sha.imr.param.SiteParams.*;
 
 /**
  * <p>Title: SiteTranslator</p>
@@ -126,7 +123,10 @@ implements java.io.Serializable {
 		
 		/*				params that can be set from Depth to Vs = 1.0 KM/sec			*/
 		map.addMapping(SiteData.TYPE_DEPTH_TO_1_0,	DepthTo1pt0kmPerSecParam.NAME);
-		
+
+        /*				params that can be set from Sediment Thickness      			*/
+        map.addMapping(SiteData.TYPE_SEDIMENT_THICKNESS, SedimentThicknessParam.NAME);
+
 		return map;
 	}
 	
